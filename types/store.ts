@@ -28,7 +28,7 @@ export interface MenuItem {
   description: string
 }
 
-export type KitchenQueueStatus = 'waiting' | 'cooking' | 'completed'
+export type KitchenQueueStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled'
 
 export interface KitchenQueue {
   id: number

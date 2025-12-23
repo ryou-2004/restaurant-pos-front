@@ -150,13 +150,13 @@ export default function KitchenPage() {
   const getStatusBadge = (status: string) => {
     const badges = {
       waiting: 'bg-yellow-100 text-yellow-800',
-      cooking: 'bg-blue-100 text-blue-800',
+      in_progress: 'bg-blue-100 text-blue-800',
       completed: 'bg-green-100 text-green-800',
       ready: 'bg-purple-100 text-purple-800'
     }
     const labels = {
       waiting: '待機中',
-      cooking: '調理中',
+      in_progress: '調理中',
       completed: '完了',
       ready: '配膳待ち'
     }
@@ -174,7 +174,7 @@ export default function KitchenPage() {
   }
 
   const waitingQueues = queues.filter(q => q.status === 'waiting')
-  const cookingQueues = queues.filter(q => q.status === 'cooking')
+  const cookingQueues = queues.filter(q => q.status === 'in_progress')
   const completedQueues = queues.filter(q => q.status === 'completed')
 
   if (loading) {
