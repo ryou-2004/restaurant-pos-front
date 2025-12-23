@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { KitchenQueue, StoreUser } from '../../../../types/store'
+import type { KitchenQueue, Order, StoreUser } from '../../../../types/store'
 
 export default function KitchenPage() {
   const [user, setUser] = useState<StoreUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [queues, setQueues] = useState<KitchenQueue[]>([])
+  const [readyOrders, setReadyOrders] = useState<Order[]>([])
   const [refreshing, setRefreshing] = useState(false)
   const router = useRouter()
 
@@ -21,15 +22,22 @@ export default function KitchenPage() {
     }
 
     setUser(JSON.parse(userStr))
-    fetchKitchenQueues(token)
+    fetchData(token)
     setLoading(false)
 
     const interval = setInterval(() => {
-      fetchKitchenQueues(token)
+      fetchData(token)
     }, 5000)
 
     return () => clearInterval(interval)
   }, [router])
+
+  const fetchData = async (token: string) => {
+    await Promise.all([
+      fetchKitchenQueues(token),
+      fetchReadyOrders(token)
+    ])
+  }
 
   const fetchKitchenQueues = async (token: string) => {
     try {
@@ -49,11 +57,29 @@ export default function KitchenPage() {
     }
   }
 
+  const fetchReadyOrders = async (token: string) => {
+    try {
+      const response = await fetch('http://localhost:3000/api/store/orders?status=ready', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setReadyOrders(data)
+      }
+    } catch (err) {
+      console.error('配膳待ち注文取得エラー:', err)
+    }
+  }
+
   const handleRefresh = async () => {
     setRefreshing(true)
     const token = localStorage.getItem('store_token')
     if (token) {
-      await fetchKitchenQueues(token)
+      await fetchData(token)
     }
     setRefreshing(false)
   }
@@ -70,7 +96,7 @@ export default function KitchenPage() {
       })
 
       if (response.ok) {
-        await fetchKitchenQueues(token!)
+        await fetchData(token!)
       }
     } catch (err) {
       console.error('調理開始エラー:', err)
@@ -89,10 +115,29 @@ export default function KitchenPage() {
       })
 
       if (response.ok) {
-        await fetchKitchenQueues(token!)
+        await fetchData(token!)
       }
     } catch (err) {
       console.error('調理完了エラー:', err)
+    }
+  }
+
+  const handleDeliver = async (orderId: number) => {
+    const token = localStorage.getItem('store_token')
+    try {
+      const response = await fetch(`http://localhost:3000/api/store/orders/${orderId}/deliver`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        await fetchData(token!)
+      }
+    } catch (err) {
+      console.error('配膳完了エラー:', err)
     }
   }
 
@@ -106,12 +151,14 @@ export default function KitchenPage() {
     const badges = {
       waiting: 'bg-yellow-100 text-yellow-800',
       cooking: 'bg-blue-100 text-blue-800',
-      completed: 'bg-green-100 text-green-800'
+      completed: 'bg-green-100 text-green-800',
+      ready: 'bg-purple-100 text-purple-800'
     }
     const labels = {
       waiting: '待機中',
       cooking: '調理中',
-      completed: '完了'
+      completed: '完了',
+      ready: '配膳待ち'
     }
     return (
       <span className={`px-3 py-1 rounded-full text-sm font-bold ${badges[status as keyof typeof badges]}`}>
@@ -180,7 +227,8 @@ export default function KitchenPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-4 gap-4">
+          {/* 待機中 */}
           <div>
             <div className="bg-yellow-50 rounded-lg shadow p-4 mb-4">
               <h2 className="text-lg font-bold mb-2">待機中 ({waitingQueues.length})</h2>
@@ -221,6 +269,7 @@ export default function KitchenPage() {
             </div>
           </div>
 
+          {/* 調理中 */}
           <div>
             <div className="bg-blue-50 rounded-lg shadow p-4 mb-4">
               <h2 className="text-lg font-bold mb-2">調理中 ({cookingQueues.length})</h2>
@@ -261,6 +310,45 @@ export default function KitchenPage() {
             </div>
           </div>
 
+          {/* 配膳待ち */}
+          <div>
+            <div className="bg-purple-50 rounded-lg shadow p-4 mb-4">
+              <h2 className="text-lg font-bold mb-2">配膳待ち ({readyOrders.length})</h2>
+            </div>
+            <div className="space-y-4">
+              {readyOrders.map(order => (
+                <div key={order.id} className="bg-white rounded-lg shadow p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <p className="text-lg font-bold">{order.order_number}</p>
+                      <p className="text-sm text-gray-600">テーブル {order.table_id}</p>
+                    </div>
+                    {getStatusBadge('ready')}
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    {order.order_items.map(item => (
+                      <div key={item.id} className="border-b pb-2">
+                        <div className="flex justify-between">
+                          <span className="font-bold">{item.menu_item_name}</span>
+                          <span className="text-sm">×{item.quantity}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => handleDeliver(order.id)}
+                    className="w-full bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    配膳完了
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 完了 */}
           <div>
             <div className="bg-green-50 rounded-lg shadow p-4 mb-4">
               <h2 className="text-lg font-bold mb-2">完了 ({completedQueues.length})</h2>
