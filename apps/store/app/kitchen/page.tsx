@@ -9,6 +9,7 @@ export default function KitchenPage() {
   const [loading, setLoading] = useState(true)
   const [queues, setQueues] = useState<KitchenQueue[]>([])
   const [readyOrders, setReadyOrders] = useState<Order[]>([])
+  const [deliveredOrders, setDeliveredOrders] = useState<Order[]>([])
   const [refreshing, setRefreshing] = useState(false)
   const router = useRouter()
 
@@ -35,7 +36,8 @@ export default function KitchenPage() {
   const fetchData = async (token: string) => {
     await Promise.all([
       fetchKitchenQueues(token),
-      fetchReadyOrders(token)
+      fetchReadyOrders(token),
+      fetchDeliveredOrders(token)
     ])
   }
 
@@ -72,6 +74,24 @@ export default function KitchenPage() {
       }
     } catch (err) {
       console.error('配膳待ち注文取得エラー:', err)
+    }
+  }
+
+  const fetchDeliveredOrders = async (token: string) => {
+    try {
+      const response = await fetch('http://localhost:3000/api/store/orders?status=delivered', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setDeliveredOrders(data)
+      }
+    } catch (err) {
+      console.error('配膳済み注文取得エラー:', err)
     }
   }
 
@@ -152,13 +172,15 @@ export default function KitchenPage() {
       waiting: 'bg-yellow-100 text-yellow-800',
       in_progress: 'bg-blue-100 text-blue-800',
       completed: 'bg-green-100 text-green-800',
-      ready: 'bg-purple-100 text-purple-800'
+      ready: 'bg-purple-100 text-purple-800',
+      delivered: 'bg-green-100 text-green-800'
     }
     const labels = {
       waiting: '待機中',
       in_progress: '調理中',
       completed: '完了',
-      ready: '配膳待ち'
+      ready: '配膳待ち',
+      delivered: '配膳済み'
     }
     return (
       <span className={`px-3 py-1 rounded-full text-sm font-bold ${badges[status as keyof typeof badges]}`}>
@@ -175,7 +197,6 @@ export default function KitchenPage() {
 
   const waitingQueues = queues.filter(q => q.status === 'waiting')
   const cookingQueues = queues.filter(q => q.status === 'in_progress')
-  const completedQueues = queues.filter(q => q.status === 'completed')
 
   if (loading) {
     return (
@@ -351,21 +372,21 @@ export default function KitchenPage() {
           {/* 完了 */}
           <div>
             <div className="bg-green-50 rounded-lg shadow p-4 mb-4">
-              <h2 className="text-lg font-bold mb-2">完了 ({completedQueues.length})</h2>
+              <h2 className="text-lg font-bold mb-2">完了（配膳済み） ({deliveredOrders.length})</h2>
             </div>
             <div className="space-y-4">
-              {completedQueues.map(queue => (
-                <div key={queue.id} className="bg-white rounded-lg shadow p-4 opacity-75">
+              {deliveredOrders.map(order => (
+                <div key={order.id} className="bg-white rounded-lg shadow p-4 opacity-75">
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <p className="text-lg font-bold">{queue.order.order_number}</p>
-                      <p className="text-sm text-gray-600">完了: {formatTime(queue.completed_at)}</p>
+                      <p className="text-lg font-bold">{order.order_number}</p>
+                      <p className="text-sm text-gray-600">テーブル {order.table_id}</p>
                     </div>
-                    {getStatusBadge(queue.status)}
+                    {getStatusBadge('delivered')}
                   </div>
 
                   <div className="space-y-2">
-                    {queue.order.order_items.map(item => (
+                    {order.order_items.map(item => (
                       <div key={item.id} className="border-b pb-2">
                         <div className="flex justify-between">
                           <span className="font-bold">{item.menu_item_name}</span>
