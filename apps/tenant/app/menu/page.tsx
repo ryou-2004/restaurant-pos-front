@@ -179,6 +179,18 @@ export default function MenuPage() {
               <span className="text-sm text-gray-600">{user?.tenant.name}</span>
             </div>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+              >
+                ダッシュボード
+              </button>
+              <button
+                onClick={() => router.push('/reports')}
+                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+              >
+                売上レポート
+              </button>
               <span className="text-gray-700">{user?.name}</span>
               <button
                 onClick={handleLogout}
