@@ -238,14 +238,14 @@ export default function KitchenPage() {
                 <div key={queue.id} className="bg-white rounded-lg shadow p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <p className="text-lg font-bold">{queue.order_number}</p>
+                      <p className="text-lg font-bold">{queue.order.order_number}</p>
                       <p className="text-sm text-gray-600">{formatTime(queue.created_at)}</p>
                     </div>
                     {getStatusBadge(queue.status)}
                   </div>
 
                   <div className="space-y-2 mb-4">
-                    {queue.order_items.map(item => (
+                    {queue.order.order_items.map(item => (
                       <div key={item.id} className="border-b pb-2">
                         <div className="flex justify-between">
                           <span className="font-bold">{item.menu_item_name}</span>
@@ -279,14 +279,14 @@ export default function KitchenPage() {
                 <div key={queue.id} className="bg-white rounded-lg shadow p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <p className="text-lg font-bold">{queue.order_number}</p>
+                      <p className="text-lg font-bold">{queue.order.order_number}</p>
                       <p className="text-sm text-gray-600">開始: {formatTime(queue.started_at)}</p>
                     </div>
                     {getStatusBadge(queue.status)}
                   </div>
 
                   <div className="space-y-2 mb-4">
-                    {queue.order_items.map(item => (
+                    {queue.order.order_items.map(item => (
                       <div key={item.id} className="border-b pb-2">
                         <div className="flex justify-between">
                           <span className="font-bold">{item.menu_item_name}</span>
@@ -358,14 +358,14 @@ export default function KitchenPage() {
                 <div key={queue.id} className="bg-white rounded-lg shadow p-4 opacity-75">
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <p className="text-lg font-bold">{queue.order_number}</p>
+                      <p className="text-lg font-bold">{queue.order.order_number}</p>
                       <p className="text-sm text-gray-600">完了: {formatTime(queue.completed_at)}</p>
                     </div>
                     {getStatusBadge(queue.status)}
                   </div>
 
                   <div className="space-y-2">
-                    {queue.order_items.map(item => (
+                    {queue.order.order_items.map(item => (
                       <div key={item.id} className="border-b pb-2">
                         <div className="flex justify-between">
                           <span className="font-bold">{item.menu_item_name}</span>
