@@ -11,8 +11,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleLogin = async (loginEmail: string, loginPassword: string) => {
     setError('')
     setLoading(true)
 
@@ -22,7 +21,7 @@ export default function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
       })
 
       const data: LoginResponse | { error: string } = await response.json()
@@ -39,6 +38,15 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await handleLogin(email, password)
+  }
+
+  const handleTestLogin = async () => {
+    await handleLogin('staff@demo-enterprise.local', 'password123')
   }
 
   return (
@@ -90,10 +98,15 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-4 text-sm text-gray-600">
-          <p>テストアカウント:</p>
-          <p>Email: staff@demo-enterprise.local</p>
-          <p>Password: password123</p>
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={handleTestLogin}
+            disabled={loading}
+            className="w-full bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
+          >
+            テストアカウントでログイン
+          </button>
         </div>
       </div>
     </div>
