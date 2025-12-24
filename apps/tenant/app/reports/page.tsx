@@ -210,6 +210,14 @@ export default function ReportsPage() {
               >
                 店舗管理
               </button>
+              {user?.role === 'owner' && (
+                <button
+                  onClick={() => router.push('/users')}
+                  className="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  ユーザー管理
+                </button>
+              )}
               <span className="text-gray-700">{user?.name}</span>
               <button
                 onClick={handleLogout}

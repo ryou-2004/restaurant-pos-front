@@ -4,38 +4,55 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { TenantUser } from '../../../../types/tenant'
 
-interface Store {
+type UserRole = 'owner' | 'manager' | 'staff' | 'kitchen_staff' | 'cashier'
+
+interface User {
   id: number
   name: string
-  address: string | null
-  phone: string | null
-  active: boolean
+  email: string
+  role: UserRole
   created_at: string
   updated_at: string
 }
 
-interface StoreInput {
+interface UserInput {
   name: string
-  address: string
-  phone: string
-  active: boolean
+  email: string
+  password: string
+  role: UserRole
 }
 
-export default function StoresPage() {
+export default function UsersPage() {
   const [user, setUser] = useState<TenantUser | null>(null)
   const [loading, setLoading] = useState(true)
-  const [stores, setStores] = useState<Store[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingStore, setEditingStore] = useState<Store | null>(null)
-  const [formData, setFormData] = useState<StoreInput>({
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [formData, setFormData] = useState<UserInput>({
     name: '',
-    address: '',
-    phone: '',
-    active: true
+    email: '',
+    password: '',
+    role: 'staff'
   })
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const router = useRouter()
+
+  const roleLabels: Record<UserRole, string> = {
+    owner: 'オーナー',
+    manager: 'マネージャー',
+    staff: 'スタッフ',
+    kitchen_staff: '厨房スタッフ',
+    cashier: '会計担当'
+  }
+
+  const roleColors: Record<UserRole, string> = {
+    owner: 'bg-purple-100 text-purple-800',
+    manager: 'bg-blue-100 text-blue-800',
+    staff: 'bg-green-100 text-green-800',
+    kitchen_staff: 'bg-yellow-100 text-yellow-800',
+    cashier: 'bg-pink-100 text-pink-800'
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('tenant_token')
@@ -46,14 +63,23 @@ export default function StoresPage() {
       return
     }
 
-    setUser(JSON.parse(userStr))
-    fetchStores(token)
+    const userData = JSON.parse(userStr)
+    setUser(userData)
+
+    // ownerのみユーザー管理可能
+    if (userData.role !== 'owner') {
+      alert('この機能はオーナーのみアクセス可能です')
+      router.push('/dashboard')
+      return
+    }
+
+    fetchUsers(token)
     setLoading(false)
   }, [router])
 
-  const fetchStores = async (token: string) => {
+  const fetchUsers = async (token: string) => {
     try {
-      const response = await fetch('http://localhost:3000/api/tenant/stores', {
+      const response = await fetch('http://localhost:3000/api/tenant/users', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -62,29 +88,29 @@ export default function StoresPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setStores(data)
+        setUsers(data)
       }
     } catch (err) {
-      console.error('店舗一覧取得エラー:', err)
+      console.error('ユーザー一覧取得エラー:', err)
     }
   }
 
-  const handleOpenModal = (store?: Store) => {
-    if (store) {
-      setEditingStore(store)
+  const handleOpenModal = (user?: User) => {
+    if (user) {
+      setEditingUser(user)
       setFormData({
-        name: store.name,
-        address: store.address || '',
-        phone: store.phone || '',
-        active: store.active
+        name: user.name,
+        email: user.email,
+        password: '',
+        role: user.role
       })
     } else {
-      setEditingStore(null)
+      setEditingUser(null)
       setFormData({
         name: '',
-        address: '',
-        phone: '',
-        active: true
+        email: '',
+        password: '',
+        role: 'staff'
       })
     }
     setError('')
@@ -93,7 +119,7 @@ export default function StoresPage() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false)
-    setEditingStore(null)
+    setEditingUser(null)
     setError('')
   }
 
@@ -110,11 +136,16 @@ export default function StoresPage() {
     }
 
     try {
-      const url = editingStore
-        ? `http://localhost:3000/api/tenant/stores/${editingStore.id}`
-        : 'http://localhost:3000/api/tenant/stores'
+      const url = editingUser
+        ? `http://localhost:3000/api/tenant/users/${editingUser.id}`
+        : 'http://localhost:3000/api/tenant/users'
 
-      const method = editingStore ? 'PATCH' : 'POST'
+      const method = editingUser ? 'PATCH' : 'POST'
+
+      // 編集時にパスワードが空の場合は送信しない
+      const payload = editingUser && !formData.password
+        ? { user: { name: formData.name, email: formData.email, role: formData.role } }
+        : { user: formData }
 
       const response = await fetch(url, {
         method,
@@ -122,11 +153,11 @@ export default function StoresPage() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ store: formData }),
+        body: JSON.stringify(payload),
       })
 
       if (response.ok) {
-        await fetchStores(token)
+        await fetchUsers(token)
         handleCloseModal()
       } else {
         const data = await response.json()
@@ -139,8 +170,13 @@ export default function StoresPage() {
     }
   }
 
-  const handleDelete = async (store: Store) => {
-    if (!window.confirm(`店舗「${store.name}」を削除しますか？\nこの操作は取り消せません。`)) {
+  const handleDelete = async (user: User) => {
+    if (user.role === 'owner') {
+      alert('オーナーは削除できません')
+      return
+    }
+
+    if (!window.confirm(`ユーザー「${user.name}」を削除しますか？\nこの操作は取り消せません。`)) {
       return
     }
 
@@ -148,7 +184,7 @@ export default function StoresPage() {
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:3000/api/tenant/stores/${store.id}`, {
+      const response = await fetch(`http://localhost:3000/api/tenant/users/${user.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -156,7 +192,7 @@ export default function StoresPage() {
       })
 
       if (response.ok) {
-        await fetchStores(token)
+        await fetchUsers(token)
       } else {
         alert('削除に失敗しました')
       }
@@ -185,7 +221,7 @@ export default function StoresPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-bold">店舗管理</h1>
+              <h1 className="text-xl font-bold">ユーザー管理</h1>
               <span className="text-sm text-gray-600">{user?.tenant.name}</span>
             </div>
             <div className="flex items-center space-x-4">
@@ -207,14 +243,12 @@ export default function StoresPage() {
               >
                 売上レポート
               </button>
-              {user?.role === 'owner' && (
-                <button
-                  onClick={() => router.push('/users')}
-                  className="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
-                >
-                  ユーザー管理
-                </button>
-              )}
+              <button
+                onClick={() => router.push('/stores')}
+                className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded"
+              >
+                店舗管理
+              </button>
               <span className="text-gray-700">{user?.name}</span>
               <button
                 onClick={handleLogout}
@@ -230,31 +264,28 @@ export default function StoresPage() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">店舗一覧</h2>
+            <h2 className="text-2xl font-bold">ユーザー一覧</h2>
             <button
               onClick={() => handleOpenModal()}
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
             >
-              + 新規店舗追加
+              + 新規ユーザー追加
             </button>
           </div>
 
-          {/* 店舗一覧テーブル */}
+          {/* ユーザー一覧テーブル */}
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    店舗名
+                    名前
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    住所
+                    メールアドレス
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    電話番号
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ステータス
+                    ロール
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     登録日
@@ -265,50 +296,45 @@ export default function StoresPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {stores.length > 0 ? (
-                  stores.map((store) => (
-                    <tr key={store.id}>
+                {users.length > 0 ? (
+                  users.map((u) => (
+                    <tr key={u.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{store.name}</div>
+                        <div className="text-sm font-medium text-gray-900">{u.name}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{store.address || '-'}</div>
+                        <div className="text-sm text-gray-500">{u.email}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{store.phone || '-'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          store.active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {store.active ? '有効' : '無効'}
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${roleColors[u.role]}`}>
+                          {roleLabels[u.role]}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(store.created_at).toLocaleDateString('ja-JP')}
+                        {new Date(u.created_at).toLocaleDateString('ja-JP')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <button
-                          onClick={() => handleOpenModal(store)}
+                          onClick={() => handleOpenModal(u)}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           編集
                         </button>
-                        <button
-                          onClick={() => handleDelete(store)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          削除
-                        </button>
+                        {u.role !== 'owner' && (
+                          <button
+                            onClick={() => handleDelete(u)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            削除
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                      店舗が登録されていません
+                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                      ユーザーが登録されていません
                     </td>
                   </tr>
                 )}
@@ -318,12 +344,12 @@ export default function StoresPage() {
         </div>
       </main>
 
-      {/* 店舗追加/編集モーダル */}
+      {/* ユーザー追加/編集モーダル */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <h3 className="text-lg font-bold mb-4">
-              {editingStore ? '店舗情報編集' : '新規店舗追加'}
+              {editingUser ? 'ユーザー情報編集' : '新規ユーザー追加'}
             </h3>
 
             {error && (
@@ -335,54 +361,64 @@ export default function StoresPage() {
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
                 <label className="block text-gray-700 text-sm font-bold mb-2">
-                  店舗名 <span className="text-red-500">*</span>
+                  名前 <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  placeholder="例: 渋谷店"
+                  placeholder="例: 山田太郎"
                   required
                 />
               </div>
 
               <div className="mb-4">
                 <label className="block text-gray-700 text-sm font-bold mb-2">
-                  住所
+                  メールアドレス <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  placeholder="例: 東京都渋谷区..."
+                  placeholder="例: user@example.com"
+                  required
                 />
               </div>
 
               <div className="mb-4">
                 <label className="block text-gray-700 text-sm font-bold mb-2">
-                  電話番号
+                  パスワード {editingUser && <span className="text-sm text-gray-500">(変更する場合のみ入力)</span>}
+                  {!editingUser && <span className="text-red-500">*</span>}
                 </label>
                 <input
-                  type="text"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  placeholder="例: 03-1234-5678"
+                  placeholder="8文字以上"
+                  required={!editingUser}
+                  minLength={8}
                 />
               </div>
 
               <div className="mb-4">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.active}
-                    onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-gray-700">有効</span>
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  ロール <span className="text-red-500">*</span>
                 </label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                  className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  required
+                >
+                  <option value="staff">スタッフ</option>
+                  <option value="manager">マネージャー</option>
+                  <option value="kitchen_staff">厨房スタッフ</option>
+                  <option value="cashier">会計担当</option>
+                  <option value="owner">オーナー</option>
+                </select>
               </div>
 
               <div className="flex justify-end space-x-2">
@@ -399,7 +435,7 @@ export default function StoresPage() {
                   className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
                   disabled={submitting}
                 >
-                  {submitting ? '保存中...' : (editingStore ? '更新' : '作成')}
+                  {submitting ? '保存中...' : (editingUser ? '更新' : '作成')}
                 </button>
               </div>
             </form>
