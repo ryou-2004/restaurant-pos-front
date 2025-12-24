@@ -1,11 +1,24 @@
-import { Button } from '@repo/ui'
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
+  const router = useRouter()
+
+  useEffect(() => {
+    const token = localStorage.getItem('tenant_token')
+
+    if (token) {
+      router.push('/dashboard')
+    } else {
+      router.push('/login')
+    }
+  }, [router])
+
   return (
-    <main className="min-h-screen p-8">
-      <h1 className="text-3xl font-bold mb-4">Tenant Dashboard</h1>
-      <p className="text-gray-600 mb-4">テナント向け管理画面</p>
-      <Button>テストボタン</Button>
-    </main>
+    <div className="min-h-screen flex items-center justify-center">
+      <p>リダイレクト中...</p>
+    </div>
   )
 }

@@ -29,7 +29,7 @@ export default function LoginPage() {
       if (response.ok && 'token' in data) {
         localStorage.setItem('tenant_token', data.token)
         localStorage.setItem('tenant_user', JSON.stringify(data.user))
-        router.push('/menu')
+        router.push('/dashboard')
       } else {
         setError('error' in data ? data.error : 'ログインに失敗しました')
       }
