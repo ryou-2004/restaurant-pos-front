@@ -222,6 +222,118 @@ pnpm lint
 
 ---
 
+## API開発フロー（契約駆動開発）
+
+### 基本方針
+
+**OpenAPI仕様 = Single Source of Truth**
+
+- バックエンドとフロントエンドの型不一致を防止
+- OpenAPI仕様から自動的にTypeScript型を生成
+- APIクライアント関数で認証・エラーハンドリングを共通化
+
+### ディレクトリ構成
+
+```
+front/
+├── lib/
+│   └── api/
+│       ├── client.ts              # 共通APIクライアント（認証・エラーハンドリング）
+│       ├── tenant/
+│       │   ├── stores.ts          # Store API
+│       │   ├── users.ts           # User API
+│       │   └── reports.ts         # Report API
+│       └── store/
+│           ├── orders.ts          # Order API
+│           └── kitchen-queues.ts  # KitchenQueue API
+└── types/
+    └── api.ts                     # 自動生成される型（OpenAPIから）
+```
+
+### 開発フロー
+
+#### 1. OpenAPI仕様の作成・更新（バックエンド）
+
+```bash
+cd api
+
+# RSpecテストにOpenAPI仕様を記述
+vi spec/requests/api/tenant/stores_spec.rb
+
+# OpenAPI仕様を自動生成
+bundle exec rake rswag:specs:swaggerize
+# → swagger/v1/swagger.json が生成される
+```
+
+#### 2. TypeScript型の自動生成（フロントエンド）
+
+```bash
+cd front
+
+# OpenAPI仕様からTypeScript型を生成
+npm run generate:types
+# → types/api.ts が自動生成される
+```
+
+#### 3. APIクライアント関数の実装
+
+```typescript
+// lib/api/tenant/stores.ts
+import type { paths } from '@/types/api'
+import { apiGet, apiPost } from '../client'
+
+// 型定義（OpenAPIから抽出）
+type StoresResponse = paths['/api/tenant/stores']['get']['responses']['200']['content']['application/json']
+type Store = StoresResponse[number]
+
+// API関数
+export async function fetchStores(): Promise<StoresResponse> {
+  return apiGet<StoresResponse>('/api/tenant/stores')
+}
+
+export type { Store }
+```
+
+#### 4. コンポーネントでの使用
+
+```typescript
+import { fetchStores } from '@/lib/api/tenant/stores'
+import type { Store } from '@/lib/api/tenant/stores'
+
+const [stores, setStores] = useState<Store[]>([])
+
+const loadStores = async () => {
+  try {
+    const data = await fetchStores()  // 認証・エラーハンドリング自動
+    setStores(data)
+  } catch (err) {
+    // エラー処理
+  }
+}
+```
+
+### メリット
+
+1. **型の不一致が発生しない** - OpenAPIが唯一の真実の情報源
+2. **認証が自動** - localStorage からトークンを自動取得・付与
+3. **エラーハンドリングが統一** - 401→ログイン、503→メンテナンス表示など
+4. **コンポーネントがシンプル** - API呼び出しロジックが集約される
+5. **型定義が読みやすい** - 長い型パスを書かなくて良い
+
+### TODO（実装予定）
+
+- [ ] rswagのセットアップ
+- [ ] 既存APIのOpenAPI仕様作成
+- [ ] 共通APIクライアント（client.ts）の実装
+- [ ] 各APIクライアント関数の実装
+- [ ] 既存コンポーネントのリファクタリング
+- [ ] メンテナンスモード対応
+- [ ] CI/CDでの型生成自動化
+
+詳細は [CLAUDE.md](../CLAUDE.md) の「API開発フロー」セクションを参照。
+
+---
+
 ## Git管理
 
 - リポジトリ: https://github.com/ryou-2004/restaurant-pos-front
@@ -231,3 +343,4 @@ pnpm lint
 
 - [API仕様](../api/README.md)
 - [システム設計](../docs/)
+- [開発ガイドライン](../CLAUDE.md)
