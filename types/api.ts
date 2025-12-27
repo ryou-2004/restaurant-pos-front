@@ -4,6 +4,608 @@
  */
 
 export interface paths {
+    "/api/staff/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * スタッフログイン
+         * @description スタッフユーザーの認証を行います。
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description メールアドレス */
+                        email: string;
+                        /** @description パスワード */
+                        password: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description ログイン成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description JWTトークン */
+                            token: string;
+                            user: {
+                                id?: number;
+                                name?: string;
+                                email?: string;
+                                /** Format: date-time */
+                                created_at?: string;
+                                /** Format: date-time */
+                                updated_at?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description 認証失敗 */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/staff/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 現在のスタッフユーザー情報取得
+         * @description 認証中のスタッフユーザー情報を取得します。
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description ユーザー情報取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            user: {
+                                id?: number;
+                                name?: string;
+                                email?: string;
+                                /** Format: date-time */
+                                created_at?: string;
+                                /** Format: date-time */
+                                updated_at?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/staff/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * スタッフログアウト
+         * @description スタッフユーザーのログアウトを行います。
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description ログアウト成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            message?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/staff/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * サブスクリプション一覧取得
+         * @description サブスクリプションの一覧を取得します。スタッフ専用機能です。
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description ページ番号 */
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description サブスクリプション一覧取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: number;
+                            tenant_id: number;
+                            /**
+                             * @description プラン種別
+                             * @enum {string}
+                             */
+                            plan: "basic" | "standard" | "enterprise";
+                            /** @description 最大店舗数 */
+                            max_stores: number;
+                            /** @description リアルタイム機能有効 */
+                            realtime_enabled: boolean;
+                            /** @description ポーリング機能有効 */
+                            polling_enabled: boolean;
+                            /**
+                             * Format: date-time
+                             * @description 有効期限
+                             */
+                            expires_at: string;
+                            tenant: {
+                                id?: number;
+                                name?: string;
+                                subdomain?: string;
+                            };
+                            /** Format: date-time */
+                            created_at: string;
+                            /** Format: date-time */
+                            updated_at: string;
+                        }[];
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/staff/subscriptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description サブスクリプションID */
+                id: number;
+            };
+            cookie?: never;
+        };
+        /**
+         * サブスクリプション詳細取得
+         * @description 指定したサブスクリプションの詳細情報を取得します。
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description サブスクリプションID */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description サブスクリプション詳細取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: number;
+                            tenant_id: number;
+                            plan: string;
+                            max_stores: number;
+                            realtime_enabled: boolean;
+                            polling_enabled: boolean;
+                            /** Format: date-time */
+                            expires_at: string;
+                            tenant: {
+                                id?: number;
+                                name?: string;
+                                subdomain?: string;
+                            };
+                            /** Format: date-time */
+                            created_at: string;
+                            /** Format: date-time */
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description サブスクリプションが見つからない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * サブスクリプション更新
+         * @description サブスクリプション情報を更新します。
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description サブスクリプションID */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        subscription: {
+                            /**
+                             * @description プラン種別
+                             * @enum {string}
+                             */
+                            plan?: "basic" | "standard" | "enterprise";
+                            /** @description 最大店舗数 */
+                            max_stores?: number;
+                            /** @description リアルタイム機能有効 */
+                            realtime_enabled?: boolean;
+                            /** @description ポーリング機能有効 */
+                            polling_enabled?: boolean;
+                            /**
+                             * Format: date-time
+                             * @description 有効期限
+                             */
+                            expires_at?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description サブスクリプション更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description サブスクリプションが見つからない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description バリデーションエラー */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/staff/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * テナント一覧取得
+         * @description テナントの一覧を取得します。スタッフ専用機能です。
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description ページ番号 */
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description テナント一覧取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: number;
+                            name: string;
+                            subdomain: string;
+                            subscription: {
+                                id?: number;
+                                /** @enum {string} */
+                                plan?: "basic" | "standard" | "enterprise";
+                                max_stores?: number;
+                                realtime_enabled?: boolean;
+                                polling_enabled?: boolean;
+                                /** Format: date-time */
+                                expires_at?: string;
+                            };
+                            users_count?: number;
+                            /** Format: date-time */
+                            created_at: string;
+                            /** Format: date-time */
+                            updated_at: string;
+                        }[];
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /**
+         * テナント作成
+         * @description 新しいテナントを作成します。スタッフ専用機能です。
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        tenant: {
+                            /** @description テナント名 */
+                            name: string;
+                            /** @description サブドメイン */
+                            subdomain: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description テナント作成成功 */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description バリデーションエラー */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/staff/tenants/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description テナントID */
+                id: number;
+            };
+            cookie?: never;
+        };
+        /**
+         * テナント詳細取得
+         * @description 指定したテナントの詳細情報を取得します。
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description テナントID */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description テナント詳細取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: number;
+                            name: string;
+                            subdomain: string;
+                            subscription: {
+                                id?: number;
+                                plan?: string;
+                                max_stores?: number;
+                                realtime_enabled?: boolean;
+                                polling_enabled?: boolean;
+                                /** Format: date-time */
+                                expires_at?: string;
+                            };
+                            users?: {
+                                id?: number;
+                                name?: string;
+                                email?: string;
+                                role?: string;
+                            }[];
+                            /** Format: date-time */
+                            created_at: string;
+                            /** Format: date-time */
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description テナントが見つからない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * テナント更新
+         * @description テナント情報を更新します。
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description テナントID */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        tenant: {
+                            name?: string;
+                            subdomain?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description テナント更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description テナントが見つからない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/store/kitchen_queues": {
         parameters: {
             query?: never;
