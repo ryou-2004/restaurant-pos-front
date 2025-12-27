@@ -3,16 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { TenantUser } from '../../../../types/tenant'
-
-interface Store {
-  id: number
-  name: string
-  address: string | null
-  phone: string | null
-  active: boolean
-  created_at: string
-  updated_at: string
-}
+import type { Store, StoreCreateRequest, StoreUpdateRequest } from '../../../../lib/api/tenant/stores'
+import { fetchStores, createStore as createStoreApi, updateStore as updateStoreApi, deleteStore as deleteStoreApi } from '../../../../lib/api/tenant/stores'
+import { ApiError } from '../../../../lib/api/client'
 
 interface StoreInput {
   name: string
@@ -47,25 +40,20 @@ export default function StoresPage() {
     }
 
     setUser(JSON.parse(userStr))
-    fetchStores(token)
+    loadStores()
     setLoading(false)
   }, [router])
 
-  const fetchStores = async (token: string) => {
+  const loadStores = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/tenant/stores', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setStores(data)
-      }
+      const data = await fetchStores()
+      setStores(data)
     } catch (err) {
-      console.error('店舗一覧取得エラー:', err)
+      if (err instanceof ApiError) {
+        console.error('店舗一覧取得エラー:', err.message)
+      } else {
+        console.error('店舗一覧取得エラー:', err)
+      }
     }
   }
 
@@ -102,38 +90,21 @@ export default function StoresPage() {
     setError('')
     setSubmitting(true)
 
-    const token = localStorage.getItem('tenant_token')
-    if (!token) {
-      setError('認証エラー。再ログインしてください。')
-      setSubmitting(false)
-      return
-    }
-
     try {
-      const url = editingStore
-        ? `http://localhost:3000/api/tenant/stores/${editingStore.id}`
-        : 'http://localhost:3000/api/tenant/stores'
-
-      const method = editingStore ? 'PATCH' : 'POST'
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ store: formData }),
-      })
-
-      if (response.ok) {
-        await fetchStores(token)
-        handleCloseModal()
+      if (editingStore) {
+        await updateStoreApi(editingStore.id, formData)
       } else {
-        const data = await response.json()
-        setError(data.errors?.join(', ') || '保存に失敗しました')
+        await createStoreApi(formData)
       }
+
+      await loadStores()
+      handleCloseModal()
     } catch (err) {
-      setError('サーバーに接続できません')
+      if (err instanceof ApiError) {
+        setError(err.data?.errors?.join(', ') || '保存に失敗しました')
+      } else {
+        setError('サーバーに接続できません')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -144,24 +115,15 @@ export default function StoresPage() {
       return
     }
 
-    const token = localStorage.getItem('tenant_token')
-    if (!token) return
-
     try {
-      const response = await fetch(`http://localhost:3000/api/tenant/stores/${store.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-
-      if (response.ok) {
-        await fetchStores(token)
-      } else {
-        alert('削除に失敗しました')
-      }
+      await deleteStoreApi(store.id)
+      await loadStores()
     } catch (err) {
-      alert('サーバーに接続できません')
+      if (err instanceof ApiError) {
+        alert(err.data?.errors?.join(', ') || '削除に失敗しました')
+      } else {
+        alert('サーバーに接続できません')
+      }
     }
   }
 
