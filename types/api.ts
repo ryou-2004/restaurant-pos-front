@@ -1785,6 +1785,15 @@ export interface paths {
                             phone?: string | null;
                             /** @description 有効/無効 */
                             active: boolean;
+                            /** @description 店長のテナントユーザーID */
+                            manager_id?: number | null;
+                            /** @description 店長情報 */
+                            manager?: {
+                                id?: number;
+                                name?: string;
+                                email?: string;
+                                role?: string;
+                            } | null;
                             /**
                              * Format: date-time
                              * @description 作成日時
@@ -1836,6 +1845,8 @@ export interface paths {
                              * @default true
                              */
                             active?: boolean;
+                            /** @description 店長のテナントユーザーID */
+                            manager_id?: number | null;
                         };
                     };
                 };
@@ -1853,6 +1864,13 @@ export interface paths {
                             address?: string | null;
                             phone?: string | null;
                             active: boolean;
+                            manager_id?: number | null;
+                            manager?: {
+                                id?: number;
+                                name?: string;
+                                email?: string;
+                                role?: string;
+                            } | null;
                             /** Format: date-time */
                             created_at: string;
                             /** Format: date-time */
@@ -1924,6 +1942,13 @@ export interface paths {
                             address?: string | null;
                             phone?: string | null;
                             active: boolean;
+                            manager_id?: number | null;
+                            manager?: {
+                                id?: number;
+                                name?: string;
+                                email?: string;
+                                role?: string;
+                            } | null;
                             /** Format: date-time */
                             created_at: string;
                             /** Format: date-time */
@@ -2024,6 +2049,8 @@ export interface paths {
                             phone?: string;
                             /** @description 有効/無効 */
                             active?: boolean;
+                            /** @description 店長のテナントユーザーID */
+                            manager_id?: number | null;
                         };
                     };
                 };
@@ -2041,6 +2068,13 @@ export interface paths {
                             address?: string | null;
                             phone?: string | null;
                             active: boolean;
+                            manager_id?: number | null;
+                            manager?: {
+                                id?: number;
+                                name?: string;
+                                email?: string;
+                                role?: string;
+                            } | null;
                             /** Format: date-time */
                             created_at: string;
                             /** Format: date-time */
@@ -2058,6 +2092,307 @@ export interface paths {
                     };
                 };
                 /** @description 店舗が見つからない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description バリデーションエラー */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/tenant/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * タグ一覧取得
+         * @description テナントに紐づくタグの一覧を取得します。manager以上の権限が必要です。
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description タグ一覧取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description タグID */
+                            id: number;
+                            /** @description タグ名 */
+                            name: string;
+                            /**
+                             * Format: date-time
+                             * @description 作成日時
+                             */
+                            created_at: string;
+                            /**
+                             * Format: date-time
+                             * @description 更新日時
+                             */
+                            updated_at: string;
+                        }[];
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * タグ作成
+         * @description 新しいタグを作成します。manager以上の権限が必要です。
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        tag: {
+                            /** @description タグ名 */
+                            name: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description タグ作成成功 */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: number;
+                            name: string;
+                            /** Format: date-time */
+                            created_at: string;
+                            /** Format: date-time */
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description バリデーションエラー */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tenant/tags/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description タグID */
+                id: number;
+            };
+            cookie?: never;
+        };
+        /**
+         * タグ詳細取得
+         * @description 指定したタグの詳細情報を取得します。manager以上の権限が必要です。
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description タグID */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description タグ詳細取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: number;
+                            name: string;
+                            /** Format: date-time */
+                            created_at: string;
+                            /** Format: date-time */
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description タグが見つからない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * タグ削除
+         * @description 指定したタグを削除します。manager以上の権限が必要です。
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description タグID */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description タグ削除成功 */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description タグが見つからない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * タグ更新
+         * @description 指定したタグの情報を更新します。manager以上の権限が必要です。
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description タグID */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        tag: {
+                            /** @description タグ名 */
+                            name?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description タグ更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: number;
+                            name: string;
+                            /** Format: date-time */
+                            created_at: string;
+                            /** Format: date-time */
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description タグが見つからない */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -2117,6 +2452,11 @@ export interface paths {
                              * @enum {string}
                              */
                             role: "owner" | "manager" | "staff" | "kitchen_staff" | "cashier";
+                            /** @description タグ一覧 */
+                            tags?: {
+                                id?: number;
+                                name?: string;
+                            }[];
                             /**
                              * Format: date-time
                              * @description 作成日時
@@ -2168,6 +2508,8 @@ export interface paths {
                              * @enum {string}
                              */
                             role: "owner" | "manager" | "staff" | "kitchen_staff" | "cashier";
+                            /** @description タグIDの配列 */
+                            tag_ids?: number[];
                         };
                     };
                 };

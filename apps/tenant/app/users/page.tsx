@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { TenantUser } from '../../../../types/tenant'
+import { fetchTags } from '@/lib/api/tenant/tags'
+import type { Tag } from '@/lib/api/tenant/tags'
 
 type UserRole = 'owner' | 'manager' | 'staff' | 'kitchen_staff' | 'cashier'
 
@@ -11,6 +13,7 @@ interface User {
   name: string
   email: string
   role: UserRole
+  tags: Array<{ id: number; name: string }>
   created_at: string
   updated_at: string
 }
@@ -20,19 +23,22 @@ interface UserInput {
   email: string
   password: string
   role: UserRole
+  tag_ids: number[]
 }
 
 export default function UsersPage() {
   const [user, setUser] = useState<TenantUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [users, setUsers] = useState<User[]>([])
+  const [tags, setTags] = useState<Tag[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [formData, setFormData] = useState<UserInput>({
     name: '',
     email: '',
     password: '',
-    role: 'staff'
+    role: 'staff',
+    tag_ids: []
   })
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -74,8 +80,18 @@ export default function UsersPage() {
     }
 
     fetchUsers(token)
+    loadTags()
     setLoading(false)
   }, [router])
+
+  const loadTags = async () => {
+    try {
+      const tagData = await fetchTags()
+      setTags(tagData)
+    } catch (err) {
+      console.error('タグ一覧取得エラー:', err)
+    }
+  }
 
   const fetchUsers = async (token: string) => {
     try {
@@ -102,7 +118,8 @@ export default function UsersPage() {
         name: user.name,
         email: user.email,
         password: '',
-        role: user.role
+        role: user.role,
+        tag_ids: user.tags.map(tag => tag.id)
       })
     } else {
       setEditingUser(null)
@@ -110,7 +127,8 @@ export default function UsersPage() {
         name: '',
         email: '',
         password: '',
-        role: 'staff'
+        role: 'staff',
+        tag_ids: []
       })
     }
     setError('')
@@ -249,6 +267,12 @@ export default function UsersPage() {
               >
                 店舗管理
               </button>
+              <button
+                onClick={() => router.push('/tags')}
+                className="bg-teal-500 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded"
+              >
+                タグ管理
+              </button>
               <span className="text-gray-700">{user?.name}</span>
               <button
                 onClick={handleLogout}
@@ -288,6 +312,9 @@ export default function UsersPage() {
                     ロール
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    タグ
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     登録日
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -309,6 +336,22 @@ export default function UsersPage() {
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${roleColors[u.role]}`}>
                           {roleLabels[u.role]}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {u.tags.length > 0 ? (
+                            u.tags.map((tag) => (
+                              <span
+                                key={tag.id}
+                                className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
+                              >
+                                {tag.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-gray-400">タグなし</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(u.created_at).toLocaleDateString('ja-JP')}
@@ -341,7 +384,7 @@ export default function UsersPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                       ユーザーが登録されていません
                     </td>
                   </tr>
@@ -427,6 +470,53 @@ export default function UsersPage() {
                   <option value="cashier">会計担当</option>
                   <option value="owner">オーナー</option>
                 </select>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  タグ
+                </label>
+                <div className="border rounded p-3 max-h-40 overflow-y-auto bg-gray-50">
+                  {tags.length > 0 ? (
+                    tags.map((tag) => (
+                      <div key={tag.id} className="flex items-center mb-2">
+                        <input
+                          type="checkbox"
+                          id={`tag-${tag.id}`}
+                          checked={formData.tag_ids.includes(tag.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({
+                                ...formData,
+                                tag_ids: [...formData.tag_ids, tag.id]
+                              })
+                            } else {
+                              setFormData({
+                                ...formData,
+                                tag_ids: formData.tag_ids.filter(id => id !== tag.id)
+                              })
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <label htmlFor={`tag-${tag.id}`} className="text-sm cursor-pointer">
+                          {tag.name}
+                        </label>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      タグが登録されていません。
+                      <button
+                        type="button"
+                        onClick={() => router.push('/tags')}
+                        className="text-blue-600 hover:underline ml-1"
+                      >
+                        タグ管理へ
+                      </button>
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="flex justify-end space-x-2">

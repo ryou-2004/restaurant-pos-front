@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import type { TenantUser } from '../../../../types/tenant'
 import type { Store, StoreCreateRequest, StoreUpdateRequest } from '../../../../lib/api/tenant/stores'
 import { fetchStores, createStore as createStoreApi, updateStore as updateStoreApi, deleteStore as deleteStoreApi } from '../../../../lib/api/tenant/stores'
+import { fetchUsers } from '../../../../lib/api/tenant/users'
+import type { User } from '../../../../lib/api/tenant/users'
 import { ApiError } from '../../../../lib/api/client'
 
 interface StoreInput {
@@ -12,12 +14,14 @@ interface StoreInput {
   address: string
   phone: string
   active: boolean
+  manager_id?: number | null
 }
 
 export default function StoresPage() {
   const [user, setUser] = useState<TenantUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [stores, setStores] = useState<Store[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingStore, setEditingStore] = useState<Store | null>(null)
   const [formData, setFormData] = useState<StoreInput>({
@@ -41,6 +45,7 @@ export default function StoresPage() {
 
     setUser(JSON.parse(userStr))
     loadStores()
+    loadUsers()
     setLoading(false)
   }, [router])
 
@@ -57,6 +62,19 @@ export default function StoresPage() {
     }
   }
 
+  const loadUsers = async () => {
+    try {
+      const data = await fetchUsers()
+      setUsers(data)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        console.error('ユーザー一覧取得エラー:', err.message)
+      } else {
+        console.error('ユーザー一覧取得エラー:', err)
+      }
+    }
+  }
+
   const handleOpenModal = (store?: Store) => {
     if (store) {
       setEditingStore(store)
@@ -64,7 +82,8 @@ export default function StoresPage() {
         name: store.name,
         address: store.address || '',
         phone: store.phone || '',
-        active: store.active
+        active: store.active,
+        manager_id: store.manager_id
       })
     } else {
       setEditingStore(null)
@@ -216,6 +235,9 @@ export default function StoresPage() {
                     電話番号
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    店長
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     ステータス
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -238,6 +260,9 @@ export default function StoresPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500">{store.phone || '-'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{store.manager?.name || '-'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -277,7 +302,7 @@ export default function StoresPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                       店舗が登録されていません
                     </td>
                   </tr>
@@ -341,6 +366,24 @@ export default function StoresPage() {
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   placeholder="例: 03-1234-5678"
                 />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  店長
+                </label>
+                <select
+                  value={formData.manager_id || ''}
+                  onChange={(e) => setFormData({ ...formData, manager_id: e.target.value ? Number(e.target.value) : undefined })}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                >
+                  <option value="">未設定</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.email})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="mb-4">
