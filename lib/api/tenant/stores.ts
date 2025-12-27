@@ -5,62 +5,41 @@
  */
 
 import { apiGet, apiPost, apiPatch, apiDelete } from '../client'
+import type { paths } from '../../../types/api'
 
 // ========================================
-// 型定義
+// 型定義（OpenAPI仕様から自動生成）
 // ========================================
-// 注意: 実際のプロジェクトでは、これらの型は types/api.ts から自動生成されます
-// 以下は実装例として手動で定義していますが、本来は以下のように使用します:
-// import type { paths } from '@/types/api'
-// type StoresResponse = paths['/api/tenant/stores']['get']['responses']['200']['content']['application/json']
-
-/**
- * 店舗
- */
-export interface Store {
-  id: number
-  name: string
-  address: string | null
-  phone: string | null
-  active: boolean
-  created_at: string
-  updated_at: string
-}
-
-/**
- * 店舗作成リクエスト
- */
-export interface StoreCreateRequest {
-  name: string
-  address?: string
-  phone?: string
-  active?: boolean
-}
-
-/**
- * 店舗更新リクエスト
- */
-export interface StoreUpdateRequest {
-  name?: string
-  address?: string
-  phone?: string
-  active?: boolean
-}
 
 /**
  * 店舗一覧レスポンス
  */
-export type StoresResponse = Store[]
+export type StoresResponse = paths['/api/tenant/stores']['get']['responses']['200']['content']['application/json']
+
+/**
+ * 店舗（単体）
+ */
+export type Store = StoresResponse[number]
+
+/**
+ * 店舗作成リクエスト
+ */
+export type StoreCreateRequest = NonNullable<paths['/api/tenant/stores']['post']['requestBody']>['content']['application/json']['store']
 
 /**
  * 店舗作成レスポンス
  */
-export type StoreCreateResponse = Store
+export type StoreCreateResponse = paths['/api/tenant/stores']['post']['responses']['201']['content']['application/json']
+
+/**
+ * 店舗更新リクエスト
+ */
+export type StoreUpdateRequest = NonNullable<paths['/api/tenant/stores/{id}']['patch']['requestBody']>['content']['application/json']['store']
 
 /**
  * 店舗更新レスポンス
  */
-export type StoreUpdateResponse = Store
+export type StoreUpdateResponse = paths['/api/tenant/stores/{id}']['patch']['responses']['200']['content']['application/json']
 
 // ========================================
 // API関数
