@@ -10,8 +10,6 @@ export type KitchenQueue = KitchenQueuesResponse[number]
 
 export type KitchenQueueUpdateRequest = NonNullable<paths['/api/store/kitchen_queues/{id}']['patch']['requestBody']>['content']['application/json']['kitchen_queue']
 
-export type KitchenQueueUpdateResponse = paths['/api/store/kitchen_queues/{id}']['patch']['responses']['200']['content']['application/json']
-
 export type KitchenQueueStatus = 'waiting' | 'in_progress' | 'completed'
 
 // ========================================
@@ -30,14 +28,14 @@ export async function fetchKitchenQueue(id: number): Promise<KitchenQueue> {
 export async function updateKitchenQueue(
   id: number,
   data: KitchenQueueUpdateRequest
-): Promise<KitchenQueueUpdateResponse> {
-  return apiPatch<KitchenQueueUpdateResponse>(`${BASE_URL}/${id}`, { kitchen_queue: data })
+): Promise<any> {
+  return apiPatch(`${BASE_URL}/${id}`, { kitchen_queue: data })
 }
 
-export async function startQueue(id: number): Promise<KitchenQueueUpdateResponse> {
-  return apiPatch<KitchenQueueUpdateResponse>(`${BASE_URL}/${id}/start`)
+export async function startQueue(id: number): Promise<any> {
+  return apiPatch(`${BASE_URL}/${id}/start`)
 }
 
-export async function completeQueue(id: number): Promise<KitchenQueueUpdateResponse> {
-  return apiPatch<KitchenQueueUpdateResponse>(`${BASE_URL}/${id}/complete`)
+export async function completeQueue(id: number): Promise<any> {
+  return apiPatch(`${BASE_URL}/${id}/complete`)
 }

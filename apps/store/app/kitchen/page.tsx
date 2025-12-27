@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { KitchenQueue, Order, StoreUser } from '../../../../types/store'
+import type { KitchenQueue } from '../../../../lib/api/store/kitchen-queues'
+import type { Order } from '../../../../lib/api/store/orders'
+import type { StoreUser } from '../../../../types/store'
+import { fetchKitchenQueues, startQueue, completeQueue } from '../../../../lib/api/store/kitchen-queues'
+import { fetchOrders, deliverOrder } from '../../../../lib/api/store/orders'
 
 export default function KitchenPage() {
   const [user, setUser] = useState<StoreUser | null>(null)
@@ -23,139 +27,59 @@ export default function KitchenPage() {
     }
 
     setUser(JSON.parse(userStr))
-    fetchData(token)
+    fetchData()
     setLoading(false)
 
     const interval = setInterval(() => {
-      fetchData(token)
+      fetchData()
     }, 5000)
 
     return () => clearInterval(interval)
   }, [router])
 
-  const fetchData = async (token: string) => {
-    await Promise.all([
-      fetchKitchenQueues(token),
-      fetchReadyOrders(token),
-      fetchDeliveredOrders(token)
-    ])
-  }
-
-  const fetchKitchenQueues = async (token: string) => {
+  const fetchData = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/store/kitchen_queues', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setQueues(data)
-      }
+      const [queuesData, readyOrdersData, deliveredOrdersData] = await Promise.all([
+        fetchKitchenQueues(),
+        fetchOrders('ready'),
+        fetchOrders('delivered')
+      ])
+      setQueues(queuesData)
+      setReadyOrders(readyOrdersData)
+      setDeliveredOrders(deliveredOrdersData)
     } catch (err) {
-      console.error('厨房キュー取得エラー:', err)
-    }
-  }
-
-  const fetchReadyOrders = async (token: string) => {
-    try {
-      const response = await fetch('http://localhost:3000/api/store/orders?status=ready', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setReadyOrders(data)
-      }
-    } catch (err) {
-      console.error('配膳待ち注文取得エラー:', err)
-    }
-  }
-
-  const fetchDeliveredOrders = async (token: string) => {
-    try {
-      const response = await fetch('http://localhost:3000/api/store/orders?status=delivered', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setDeliveredOrders(data)
-      }
-    } catch (err) {
-      console.error('配膳済み注文取得エラー:', err)
+      console.error('データ取得エラー:', err)
     }
   }
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    const token = localStorage.getItem('store_token')
-    if (token) {
-      await fetchData(token)
-    }
+    await fetchData()
     setRefreshing(false)
   }
 
   const handleStart = async (queueId: number) => {
-    const token = localStorage.getItem('store_token')
     try {
-      const response = await fetch(`http://localhost:3000/api/store/kitchen_queues/${queueId}/start`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        await fetchData(token!)
-      }
+      await startQueue(queueId)
+      await fetchData()
     } catch (err) {
       console.error('調理開始エラー:', err)
     }
   }
 
   const handleComplete = async (queueId: number) => {
-    const token = localStorage.getItem('store_token')
     try {
-      const response = await fetch(`http://localhost:3000/api/store/kitchen_queues/${queueId}/complete`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        await fetchData(token!)
-      }
+      await completeQueue(queueId)
+      await fetchData()
     } catch (err) {
       console.error('調理完了エラー:', err)
     }
   }
 
   const handleDeliver = async (orderId: number) => {
-    const token = localStorage.getItem('store_token')
     try {
-      const response = await fetch(`http://localhost:3000/api/store/orders/${orderId}/deliver`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        await fetchData(token!)
-      }
+      await deliverOrder(orderId)
+      await fetchData()
     } catch (err) {
       console.error('配膳完了エラー:', err)
     }
@@ -266,7 +190,7 @@ export default function KitchenPage() {
                   </div>
 
                   <div className="space-y-2 mb-4">
-                    {queue.order.order_items.map(item => (
+                    {queue.order.order_items?.map(item => (
                       <div key={item.id} className="border-b pb-2">
                         <div className="flex justify-between">
                           <span className="font-bold">{item.menu_item_name}</span>
@@ -301,13 +225,13 @@ export default function KitchenPage() {
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <p className="text-lg font-bold">{queue.order.order_number}</p>
-                      <p className="text-sm text-gray-600">開始: {formatTime(queue.started_at)}</p>
+                      <p className="text-sm text-gray-600">更新: {formatTime(queue.updated_at)}</p>
                     </div>
                     {getStatusBadge(queue.status)}
                   </div>
 
                   <div className="space-y-2 mb-4">
-                    {queue.order.order_items.map(item => (
+                    {queue.order.order_items?.map(item => (
                       <div key={item.id} className="border-b pb-2">
                         <div className="flex justify-between">
                           <span className="font-bold">{item.menu_item_name}</span>
