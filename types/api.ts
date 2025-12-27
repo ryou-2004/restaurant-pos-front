@@ -1785,15 +1785,6 @@ export interface paths {
                             phone?: string | null;
                             /** @description 有効/無効 */
                             active: boolean;
-                            /** @description 店長のテナントユーザーID */
-                            manager_id?: number | null;
-                            /** @description 店長情報 */
-                            manager?: {
-                                id?: number;
-                                name?: string;
-                                email?: string;
-                                role?: string;
-                            } | null;
                             /**
                              * Format: date-time
                              * @description 作成日時
@@ -1845,8 +1836,6 @@ export interface paths {
                              * @default true
                              */
                             active?: boolean;
-                            /** @description 店長のテナントユーザーID */
-                            manager_id?: number | null;
                         };
                     };
                 };
@@ -1864,13 +1853,6 @@ export interface paths {
                             address?: string | null;
                             phone?: string | null;
                             active: boolean;
-                            manager_id?: number | null;
-                            manager?: {
-                                id?: number;
-                                name?: string;
-                                email?: string;
-                                role?: string;
-                            } | null;
                             /** Format: date-time */
                             created_at: string;
                             /** Format: date-time */
@@ -1942,13 +1924,6 @@ export interface paths {
                             address?: string | null;
                             phone?: string | null;
                             active: boolean;
-                            manager_id?: number | null;
-                            manager?: {
-                                id?: number;
-                                name?: string;
-                                email?: string;
-                                role?: string;
-                            } | null;
                             /** Format: date-time */
                             created_at: string;
                             /** Format: date-time */
@@ -2049,8 +2024,6 @@ export interface paths {
                             phone?: string;
                             /** @description 有効/無効 */
                             active?: boolean;
-                            /** @description 店長のテナントユーザーID */
-                            manager_id?: number | null;
                         };
                     };
                 };
@@ -2068,13 +2041,6 @@ export interface paths {
                             address?: string | null;
                             phone?: string | null;
                             active: boolean;
-                            manager_id?: number | null;
-                            manager?: {
-                                id?: number;
-                                name?: string;
-                                email?: string;
-                                role?: string;
-                            } | null;
                             /** Format: date-time */
                             created_at: string;
                             /** Format: date-time */
@@ -2092,6 +2058,351 @@ export interface paths {
                     };
                 };
                 /** @description 店舗が見つからない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description バリデーションエラー */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/tenant/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * テーブル一覧取得
+         * @description テナントに紐づくテーブルの一覧を取得します。manager以上の権限が必要です。
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description テーブル一覧取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description テーブルID */
+                            id: number;
+                            /** @description 店舗ID */
+                            store_id: number;
+                            /** @description 店舗名 */
+                            store_name: string;
+                            /** @description テーブル番号 */
+                            number: string;
+                            /** @description 収容人数 */
+                            capacity: number;
+                            /**
+                             * @description ステータス
+                             * @enum {string}
+                             */
+                            status: "available" | "occupied" | "reserved" | "cleaning";
+                            /** @description QRコード */
+                            qr_code?: string;
+                            /**
+                             * Format: date-time
+                             * @description 作成日時
+                             */
+                            created_at: string;
+                            /**
+                             * Format: date-time
+                             * @description 更新日時
+                             */
+                            updated_at: string;
+                        }[];
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * テーブル作成
+         * @description 新しいテーブルを作成します。manager以上の権限が必要です。
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        table: {
+                            /** @description 店舗ID */
+                            store_id: number;
+                            /** @description テーブル番号 */
+                            number: string;
+                            /** @description 収容人数 */
+                            capacity?: number;
+                            /**
+                             * @description ステータス
+                             * @enum {string}
+                             */
+                            status?: "available" | "occupied" | "reserved" | "cleaning";
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description テーブル作成成功 */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: number;
+                            store_id: number;
+                            store_name: string;
+                            number: string;
+                            capacity: number;
+                            status: string;
+                            qr_code?: string;
+                            /** Format: date-time */
+                            created_at: string;
+                            /** Format: date-time */
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description バリデーションエラー */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tenant/tables/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description テーブルID */
+                id: number;
+            };
+            cookie?: never;
+        };
+        /**
+         * テーブル詳細取得
+         * @description 指定したテーブルの詳細情報を取得します。manager以上の権限が必要です。
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description テーブルID */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description テーブル詳細取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: number;
+                            store_id: number;
+                            store_name: string;
+                            number: string;
+                            capacity: number;
+                            status: string;
+                            qr_code?: string;
+                            /** Format: date-time */
+                            created_at: string;
+                            /** Format: date-time */
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description テーブルが見つからない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * テーブル削除
+         * @description 指定したテーブルを削除します。manager以上の権限が必要です。
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description テーブルID */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description テーブル削除成功 */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description テーブルが見つからない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * テーブル更新
+         * @description 指定したテーブルの情報を更新します。manager以上の権限が必要です。
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description テーブルID */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        table: {
+                            /** @description テーブル番号 */
+                            number?: string;
+                            /** @description 収容人数 */
+                            capacity?: number;
+                            /**
+                             * @description ステータス
+                             * @enum {string}
+                             */
+                            status?: "available" | "occupied" | "reserved" | "cleaning";
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description テーブル更新成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: number;
+                            store_id: number;
+                            store_name: string;
+                            number: string;
+                            capacity: number;
+                            status: string;
+                            qr_code?: string;
+                            /** Format: date-time */
+                            created_at: string;
+                            /** Format: date-time */
+                            updated_at: string;
+                        };
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description テーブルが見つからない */
                 404: {
                     headers: {
                         [name: string]: unknown;

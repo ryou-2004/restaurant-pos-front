@@ -82,8 +82,7 @@ export default function StoresPage() {
         name: store.name,
         address: store.address || '',
         phone: store.phone || '',
-        active: store.active,
-        manager_id: store.manager_id
+        active: store.active
       })
     } else {
       setEditingStore(null)
@@ -235,9 +234,6 @@ export default function StoresPage() {
                     電話番号
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    店長
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     ステータス
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -260,9 +256,6 @@ export default function StoresPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500">{store.phone || '-'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{store.manager?.name || '-'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
