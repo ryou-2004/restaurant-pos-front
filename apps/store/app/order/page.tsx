@@ -2,304 +2,282 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { MenuItem, StoreUser } from '../../../../types/store'
+import { fetchMenuItems } from '@/lib/api/store/menu-items'
+import { fetchTables } from '@/lib/api/store/tables'
+import { createOrder } from '@/lib/api/store/orders'
+import type { MenuItem } from '@/lib/api/store/menu-items'
+import type { Table } from '@/lib/api/store/tables'
+import type { OrderCreateRequest } from '@/lib/api/store/orders'
+import { ApiError } from '@/lib/api/client'
 
-interface OrderItemInput {
-  menu_item_id: number
-  menu_item_name: string
+type CartItem = {
+  menuItem: MenuItem
   quantity: number
-  unit_price: number
-  notes: string
+  notes?: string
 }
 
 export default function OrderPage() {
-  const [user, setUser] = useState<StoreUser | null>(null)
-  const [loading, setLoading] = useState(true)
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
-  const [orderItems, setOrderItems] = useState<OrderItemInput[]>([])
-  const [tableId, setTableId] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
+  const [tables, setTables] = useState<Table[]>([])
+  const [cart, setCart] = useState<CartItem[]>([])
+  const [selectedTableId, setSelectedTableId] = useState<number | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string>('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    const token = localStorage.getItem('store_token')
-    const userStr = localStorage.getItem('store_user')
+    loadData()
+  }, [])
 
-    if (!token || !userStr) {
-      router.push('/login')
-      return
-    }
-
-    setUser(JSON.parse(userStr))
-    fetchMenuItems(token)
-    setLoading(false)
-  }, [router])
-
-  const fetchMenuItems = async (token: string) => {
+  const loadData = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/store/menu_items', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setMenuItems(data)
-      }
+      setIsLoading(true)
+      const [menuData, tableData] = await Promise.all([
+        fetchMenuItems(),
+        fetchTables()
+      ])
+      setMenuItems(menuData)
+      setTables(tableData)
+      setError('')
     } catch (err) {
-      console.error('メニュー取得エラー:', err)
+      if (err instanceof ApiError) {
+        setError(err.message)
+      }
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleAddItem = (menuItem: MenuItem) => {
-    const existing = orderItems.find(item => item.menu_item_id === menuItem.id)
+  const addToCart = (menuItem: MenuItem) => {
+    const existingItem = cart.find(item => item.menuItem.id === menuItem.id)
 
-    if (existing) {
-      setOrderItems(orderItems.map(item =>
-        item.menu_item_id === menuItem.id
+    if (existingItem) {
+      setCart(cart.map(item =>
+        item.menuItem.id === menuItem.id
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ))
     } else {
-      setOrderItems([...orderItems, {
-        menu_item_id: menuItem.id,
-        menu_item_name: menuItem.name,
-        quantity: 1,
-        unit_price: menuItem.price,
-        notes: ''
-      }])
+      setCart([...cart, { menuItem, quantity: 1 }])
     }
   }
 
-  const handleQuantityChange = (menu_item_id: number, quantity: number) => {
+  const removeFromCart = (menuItemId: number) => {
+    setCart(cart.filter(item => item.menuItem.id !== menuItemId))
+  }
+
+  const updateQuantity = (menuItemId: number, quantity: number) => {
     if (quantity <= 0) {
-      setOrderItems(orderItems.filter(item => item.menu_item_id !== menu_item_id))
-    } else {
-      setOrderItems(orderItems.map(item =>
-        item.menu_item_id === menu_item_id
-          ? { ...item, quantity }
-          : item
-      ))
+      removeFromCart(menuItemId)
+      return
     }
-  }
 
-  const handleNotesChange = (menu_item_id: number, notes: string) => {
-    setOrderItems(orderItems.map(item =>
-      item.menu_item_id === menu_item_id
-        ? { ...item, notes }
+    setCart(cart.map(item =>
+      item.menuItem.id === menuItemId
+        ? { ...item, quantity }
         : item
     ))
   }
 
-  const handleSubmit = async () => {
-    if (!tableId || orderItems.length === 0) {
-      setError('テーブル番号と注文商品を選択してください')
+  const getTotalAmount = () => {
+    return cart.reduce((sum, item) => sum + (item.menuItem.price * item.quantity), 0)
+  }
+
+  const handleSubmitOrder = async () => {
+    if (!selectedTableId) {
+      setError('テーブルを選択してください')
       return
     }
 
-    setSubmitting(true)
+    if (cart.length === 0) {
+      setError('商品を選択してください')
+      return
+    }
+
+    setIsSubmitting(true)
     setError('')
 
     try {
-      const token = localStorage.getItem('store_token')
-      const response = await fetch('http://localhost:3000/api/store/orders', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          table_id: parseInt(tableId),
-          order_items_attributes: orderItems.map(item => ({
-            menu_item_id: item.menu_item_id,
-            quantity: item.quantity,
-            notes: item.notes || null
-          }))
-        }),
-      })
-
-      if (response.ok) {
-        setOrderItems([])
-        setTableId('')
-        alert('注文を送信しました')
-      } else {
-        const data = await response.json()
-        setError(data.error || '注文送信に失敗しました')
+      const orderData: OrderCreateRequest = {
+        table_id: selectedTableId,
+        order_items_attributes: cart.map(item => ({
+          menu_item_id: item.menuItem.id,
+          quantity: item.quantity,
+          notes: item.notes
+        }))
       }
+
+      await createOrder(orderData)
+
+      // 注文成功後、カートをクリアして厨房画面へ
+      setCart([])
+      setSelectedTableId(null)
+      router.push('/kitchen')
     } catch (err) {
-      setError('サーバーに接続できません')
+      if (err instanceof ApiError) {
+        setError(err.data?.errors?.join(', ') || err.message)
+      }
     } finally {
-      setSubmitting(false)
+      setIsSubmitting(false)
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('store_token')
-    localStorage.removeItem('store_user')
-    router.push('/login')
-  }
-
-  const getTotalAmount = () => {
-    return orderItems.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0)
-  }
-
-  const groupedMenuItems = menuItems.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = []
-    }
-    acc[item.category].push(item)
-    return acc
-  }, {} as Record<string, MenuItem[]>)
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>読み込み中...</p>
-      </div>
-    )
+  if (isLoading) {
+    return <div className="p-8">読み込み中...</div>
   }
 
   return (
     <div className="min-h-screen bg-gray-100">
       <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-bold">注文入力</h1>
-              <span className="text-sm text-gray-600">{user?.tenant.name}</span>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 justify-between">
+            <div className="flex items-center">
+              <h1 className="text-xl font-bold">注文入力（POS）</h1>
             </div>
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => router.push('/kitchen')}
-                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                className="rounded bg-green-500 px-4 py-2 font-bold text-white hover:bg-green-700"
               >
-                厨房画面
+                厨房画面へ
               </button>
               <button
-                onClick={() => router.push('/payment')}
-                className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+                onClick={() => router.push('/dashboard')}
+                className="rounded bg-gray-500 px-4 py-2 font-bold text-white hover:bg-gray-700"
               >
-                会計画面
-              </button>
-              <span className="text-gray-700">{user?.name}</span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-              >
-                ログアウト
+                ダッシュボード
               </button>
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-3 gap-6">
-          <div className="col-span-2">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold mb-4">メニュー</h2>
+      <main className="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+        {error && (
+          <div className="mb-4 rounded bg-red-100 p-4 text-red-700">
+            {error}
+          </div>
+        )}
 
-              {Object.entries(groupedMenuItems).map(([category, items]) => (
-                <div key={category} className="mb-6">
-                  <h3 className="text-lg font-bold mb-2 text-gray-700">{category}</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    {items.map(item => (
-                      <button
-                        key={item.id}
-                        onClick={() => handleAddItem(item)}
-                        className="p-4 border rounded-lg hover:bg-gray-50 text-left"
-                      >
-                        <p className="font-bold">{item.name}</p>
-                        <p className="text-sm text-gray-600">{item.description}</p>
-                        <p className="text-lg font-bold text-blue-600 mt-2">¥{item.price}</p>
-                      </button>
-                    ))}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* メニュー選択エリア */}
+          <div className="lg:col-span-2">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold">メニュー</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+              {menuItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => addToCart(item)}
+                  className="flex flex-col rounded-lg border bg-white p-4 text-left shadow hover:shadow-md"
+                  disabled={!item.available}
+                >
+                  <div className="mb-2 text-sm font-bold text-gray-900">
+                    {item.name}
                   </div>
-                </div>
+                  <div className="text-lg font-bold text-blue-600">
+                    ¥{item.price.toLocaleString()}
+                  </div>
+                  {!item.available && (
+                    <div className="mt-2 text-xs text-red-600">売り切れ</div>
+                  )}
+                </button>
               ))}
             </div>
           </div>
 
-          <div className="col-span-1">
-            <div className="bg-white rounded-lg shadow p-6 sticky top-6">
-              <h2 className="text-xl font-bold mb-4">注文内容</h2>
+          {/* カート・注文確定エリア */}
+          <div className="lg:col-span-1">
+            <div className="rounded-lg bg-white p-6 shadow">
+              <h2 className="mb-4 text-lg font-bold">注文内容</h2>
 
+              {/* テーブル選択 */}
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">
-                  テーブル番号
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  テーブル選択 <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="number"
-                  value={tableId}
-                  onChange={(e) => setTableId(e.target.value)}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  placeholder="1"
-                  min="1"
-                />
+                <select
+                  value={selectedTableId || ''}
+                  onChange={(e) => setSelectedTableId(Number(e.target.value))}
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                >
+                  <option value="">選択してください</option>
+                  {tables.filter(t => t.status === 'available').map((table) => (
+                    <option key={table.id} value={table.id}>
+                      {table.number} ({table.capacity}名)
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
-                  {error}
-                </div>
-              )}
-
-              {orderItems.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">商品を選択してください</p>
-              ) : (
-                <>
-                  <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
-                    {orderItems.map(item => (
-                      <div key={item.menu_item_id} className="border-b pb-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-bold">{item.menu_item_name}</span>
-                          <span className="text-sm text-gray-600">¥{item.unit_price}</span>
+              {/* カート内容 */}
+              <div className="mb-4 max-h-96 overflow-y-auto">
+                {cart.length === 0 ? (
+                  <p className="text-sm text-gray-500">商品が選択されていません</p>
+                ) : (
+                  cart.map((item) => (
+                    <div key={item.menuItem.id} className="mb-3 flex items-center justify-between border-b pb-3">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">{item.menuItem.name}</div>
+                        <div className="text-sm text-gray-600">
+                          ¥{item.menuItem.price.toLocaleString()} × {item.quantity}
                         </div>
-                        <div className="flex items-center space-x-2 mb-2">
-                          <button
-                            onClick={() => handleQuantityChange(item.menu_item_id, item.quantity - 1)}
-                            className="bg-gray-200 px-3 py-1 rounded"
-                          >
-                            -
-                          </button>
-                          <span className="w-8 text-center">{item.quantity}</span>
-                          <button
-                            onClick={() => handleQuantityChange(item.menu_item_id, item.quantity + 1)}
-                            className="bg-gray-200 px-3 py-1 rounded"
-                          >
-                            +
-                          </button>
-                          <span className="ml-auto font-bold">¥{item.unit_price * item.quantity}</span>
-                        </div>
-                        <input
-                          type="text"
-                          value={item.notes}
-                          onChange={(e) => handleNotesChange(item.menu_item_id, e.target.value)}
-                          className="text-sm border rounded w-full py-1 px-2"
-                          placeholder="備考（例: 砂糖なし）"
-                        />
                       </div>
-                    ))}
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-lg font-bold">合計</span>
-                      <span className="text-2xl font-bold text-blue-600">¥{getTotalAmount()}</span>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
+                          className="rounded bg-gray-200 px-2 py-1 hover:bg-gray-300"
+                        >
+                          -
+                        </button>
+                        <span className="w-8 text-center">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
+                          className="rounded bg-gray-200 px-2 py-1 hover:bg-gray-300"
+                        >
+                          +
+                        </button>
+                        <button
+                          onClick={() => removeFromCart(item.menuItem.id)}
+                          className="ml-2 text-red-600 hover:text-red-800"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
+                  ))
+                )}
+              </div>
 
-                    <button
-                      onClick={handleSubmit}
-                      disabled={submitting}
-                      className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded disabled:opacity-50"
-                    >
-                      {submitting ? '送信中...' : '注文を確定'}
-                    </button>
-                  </div>
-                </>
+              {/* 合計金額 */}
+              <div className="mb-4 border-t pt-4">
+                <div className="flex justify-between text-lg font-bold">
+                  <span>合計</span>
+                  <span>¥{getTotalAmount().toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* 注文確定ボタン */}
+              <button
+                onClick={handleSubmitOrder}
+                disabled={isSubmitting || cart.length === 0 || !selectedTableId}
+                className="w-full rounded bg-blue-600 px-4 py-3 font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting ? '送信中...' : '注文を確定'}
+              </button>
+
+              {/* カートクリア */}
+              {cart.length > 0 && (
+                <button
+                  onClick={() => setCart([])}
+                  className="mt-2 w-full rounded border border-gray-300 px-4 py-2 hover:bg-gray-50"
+                >
+                  カートをクリア
+                </button>
               )}
             </div>
           </div>

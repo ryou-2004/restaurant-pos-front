@@ -856,6 +856,134 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/store/menu_items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * メニュー一覧取得
+         * @description 利用可能なメニュー項目の一覧を取得します。
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description メニュー一覧取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description メニューID */
+                            id: number;
+                            /** @description メニュー名 */
+                            name: string;
+                            /** @description 価格 */
+                            price: number;
+                            /** @description カテゴリー */
+                            category: string;
+                            /** @description 利用可能 */
+                            available: boolean;
+                        }[];
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/store/menu_items/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description メニューID */
+                id: number;
+            };
+            cookie?: never;
+        };
+        /**
+         * メニュー詳細取得
+         * @description 指定したメニュー項目の詳細情報を取得します。
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description メニューID */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description メニュー詳細取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: number;
+                            name: string;
+                            price: number;
+                            category: string;
+                            available: boolean;
+                        };
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description メニューが見つからない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/store/orders": {
         parameters: {
             query?: never;
@@ -1400,6 +1528,137 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/store/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * テーブル一覧取得
+         * @description 店舗のテーブル一覧を取得します。
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description テーブル一覧取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description テーブルID */
+                            id: number;
+                            /** @description テーブル番号 */
+                            number: string;
+                            /** @description 収容人数 */
+                            capacity: number;
+                            /**
+                             * @description ステータス
+                             * @enum {string}
+                             */
+                            status: "available" | "occupied" | "reserved" | "cleaning";
+                            /** @description QRコード */
+                            qr_code?: string;
+                        }[];
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/store/tables/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description テーブルID */
+                id: number;
+            };
+            cookie?: never;
+        };
+        /**
+         * テーブル詳細取得
+         * @description 指定したテーブルの詳細情報を取得します。
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description テーブルID */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description テーブル詳細取得成功 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: number;
+                            number: string;
+                            capacity: number;
+                            status: string;
+                            qr_code?: string;
+                        };
+                    };
+                };
+                /** @description 認証エラー */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description テーブルが見つからない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/tenant/menu_items": {
