@@ -24,22 +24,31 @@ export class ApiError extends Error {
 
 /**
  * 現在のアプリケーション名を取得
- * URLのパスから判定 (例: /customer/... → 'customer')
+ * ポート番号から判定（各アプリは独立したポートで動作）
  */
 function getCurrentApp(): string {
   if (typeof window === 'undefined') return 'tenant' // SSR時のデフォルト
 
-  // URLから現在のアプリを判定
-  const pathSegments = window.location.pathname.split('/').filter(Boolean)
-  const app = pathSegments[0]
-
-  // 既知のアプリ名のみ許可
-  if (['customer', 'tenant', 'store', 'staff'].includes(app)) {
-    return app
+  // ポート番号でアプリを判定
+  const port = window.location.port
+  switch (port) {
+    case '3001':
+      return 'staff'
+    case '3002':
+      return 'tenant'
+    case '3003':
+      return 'store'
+    case '3004':
+      return 'customer'
+    default:
+      // ポートが指定されていない場合はパスで判定（後方互換性）
+      const pathSegments = window.location.pathname.split('/').filter(Boolean)
+      const app = pathSegments[0]
+      if (['customer', 'tenant', 'store', 'staff'].includes(app)) {
+        return app
+      }
+      return 'tenant'
   }
-
-  // デフォルトはテナント
-  return 'tenant'
 }
 
 /**
