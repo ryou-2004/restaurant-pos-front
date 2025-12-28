@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchMenuItems, MenuItem } from '@/lib/api/customer/menu-items'
 import { createOrder, CreateOrderRequest } from '@/lib/api/customer/orders'
@@ -19,6 +19,7 @@ export default function MenuPage() {
   const [error, setError] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [session, setSession] = useState<any>(null)
+  const categoryRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   // セッション確認とメニュー読み込み
   useEffect(() => {
@@ -121,6 +122,25 @@ export default function MenuPage() {
     return acc
   }, {} as Record<string, MenuItem[]>)
 
+  // カテゴリーリストを取得
+  const categories = Object.keys(groupedItems)
+
+  // カテゴリーまでスクロール
+  const scrollToCategory = (category: string) => {
+    const element = categoryRefs.current[category]
+    if (element) {
+      // ヘッダー + カテゴリーナビの高さを考慮してスクロール
+      const offset = 140 // ヘッダー高さ + カテゴリーナビ高さ
+      const elementPosition = element.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - offset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      })
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -156,12 +176,34 @@ export default function MenuPage() {
         </div>
       </header>
 
+      {/* カテゴリーナビゲーション */}
+      <div className="bg-white border-b sticky top-16 z-10">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex overflow-x-auto gap-2 py-3 scrollbar-hide">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => scrollToCategory(category)}
+                className="px-4 py-2 bg-gray-100 hover:bg-blue-100 text-gray-800 hover:text-blue-600 rounded-full text-sm font-medium whitespace-nowrap transition-colors"
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* メニュー一覧 */}
           <div className="lg:col-span-2 space-y-6">
             {Object.entries(groupedItems).map(([category, items]) => (
-              <div key={category}>
+              <div
+                key={category}
+                ref={(el) => {
+                  categoryRefs.current[category] = el
+                }}
+              >
                 <h2 className="text-lg font-bold text-gray-900 mb-3">{category}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {items.map((item) => (
