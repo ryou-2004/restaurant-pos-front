@@ -24,12 +24,29 @@ export class ApiError extends Error {
 
 /**
  * 現在のアプリケーション名を取得
- * ポート番号から判定（各アプリは独立したポートで動作）
+ *
+ * 優先順位:
+ * 1. 環境変数 NEXT_PUBLIC_APP_NAME（ビルド時に決定）
+ * 2. サブドメイン（本番環境: customer.example.com）
+ * 3. ポート番号（開発環境: localhost:3004）
+ * 4. デフォルト: 'tenant'
  */
 function getCurrentApp(): string {
+  // 1. 環境変数で明示的に指定（最優先）
+  if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_APP_NAME) {
+    return process.env.NEXT_PUBLIC_APP_NAME
+  }
+
   if (typeof window === 'undefined') return 'tenant' // SSR時のデフォルト
 
-  // ポート番号でアプリを判定
+  // 2. サブドメインから判定（本番環境）
+  const hostname = window.location.hostname
+  const subdomain = hostname.split('.')[0]
+  if (['customer', 'tenant', 'store', 'staff'].includes(subdomain)) {
+    return subdomain
+  }
+
+  // 3. ポート番号で判定（開発環境）
   const port = window.location.port
   switch (port) {
     case '3001':
@@ -40,15 +57,10 @@ function getCurrentApp(): string {
       return 'store'
     case '3004':
       return 'customer'
-    default:
-      // ポートが指定されていない場合はパスで判定（後方互換性）
-      const pathSegments = window.location.pathname.split('/').filter(Boolean)
-      const app = pathSegments[0]
-      if (['customer', 'tenant', 'store', 'staff'].includes(app)) {
-        return app
-      }
-      return 'tenant'
   }
+
+  // 4. デフォルト
+  return 'tenant'
 }
 
 /**
