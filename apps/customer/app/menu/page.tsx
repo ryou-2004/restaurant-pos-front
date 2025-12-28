@@ -24,7 +24,7 @@ export default function MenuPage() {
   useEffect(() => {
     const sessionData = localStorage.getItem('customer_session')
     if (!sessionData) {
-      router.push('/customer/scan')
+      router.push('/scan')
       return
     }
 
@@ -103,7 +103,7 @@ export default function MenuPage() {
 
       // 注文成功 → カートクリア → 注文一覧へ
       setCart([])
-      router.push('/customer/orders')
+      router.push('/orders')
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : '注文の送信に失敗しました'
       setError(errorMsg)
@@ -147,7 +147,7 @@ export default function MenuPage() {
               )}
             </div>
             <button
-              onClick={() => router.push('/customer/orders')}
+              onClick={() => router.push('/orders')}
               className="text-sm text-blue-600 hover:text-blue-700"
             >
               注文状況を見る

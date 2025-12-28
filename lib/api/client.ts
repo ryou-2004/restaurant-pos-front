@@ -66,13 +66,13 @@ function getLoginPath(app?: string): string {
 
   switch (currentApp) {
     case 'customer':
-      return '/customer/scan'
+      return '/scan'
     case 'tenant':
-      return '/tenant/login'
+      return '/login'
     case 'store':
-      return '/store/login'
+      return '/login'
     case 'staff':
-      return '/staff/login'
+      return '/login'
     default:
       return '/login'
   }

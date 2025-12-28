@@ -23,7 +23,7 @@ export default function ScanPage() {
       localStorage.setItem('customer_session', JSON.stringify(response.session))
 
       // メニューページへリダイレクト
-      router.push('/customer/menu')
+      router.push('/menu')
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'ログインに失敗しました'
       setError(errorMsg)

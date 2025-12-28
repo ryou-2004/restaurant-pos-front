@@ -51,7 +51,7 @@ export default function OrdersPage() {
   useEffect(() => {
     const sessionData = localStorage.getItem('customer_session')
     if (!sessionData) {
-      router.push('/customer/scan')
+      router.push('/scan')
       return
     }
     setSession(JSON.parse(sessionData))
@@ -92,7 +92,7 @@ export default function OrdersPage() {
               )}
             </div>
             <button
-              onClick={() => router.push('/customer/menu')}
+              onClick={() => router.push('/menu')}
               className="text-sm text-blue-600 hover:text-blue-700"
             >
               メニューに戻る
@@ -133,7 +133,7 @@ export default function OrdersPage() {
           <div className="bg-white rounded-lg shadow-sm p-8 text-center">
             <p className="text-gray-500">現在、注文はありません</p>
             <button
-              onClick={() => router.push('/customer/menu')}
+              onClick={() => router.push('/menu')}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               メニューから注文する
