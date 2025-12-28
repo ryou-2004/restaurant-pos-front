@@ -23,6 +23,62 @@ export class ApiError extends Error {
 }
 
 /**
+ * 現在のアプリケーション名を取得
+ * URLのパスから判定 (例: /customer/... → 'customer')
+ */
+function getCurrentApp(): string {
+  if (typeof window === 'undefined') return 'tenant' // SSR時のデフォルト
+
+  // URLから現在のアプリを判定
+  const pathSegments = window.location.pathname.split('/').filter(Boolean)
+  const app = pathSegments[0]
+
+  // 既知のアプリ名のみ許可
+  if (['customer', 'tenant', 'store', 'staff'].includes(app)) {
+    return app
+  }
+
+  // デフォルトはテナント
+  return 'tenant'
+}
+
+/**
+ * アプリ別のトークンキーを取得
+ */
+function getTokenKey(app?: string): string {
+  const currentApp = app || getCurrentApp()
+  return `${currentApp}_token`
+}
+
+/**
+ * アプリ別のユーザーキーを取得
+ */
+function getUserKey(app?: string): string {
+  const currentApp = app || getCurrentApp()
+  return `${currentApp}_user`
+}
+
+/**
+ * アプリ別のログインページを取得
+ */
+function getLoginPath(app?: string): string {
+  const currentApp = app || getCurrentApp()
+
+  switch (currentApp) {
+    case 'customer':
+      return '/customer/scan'
+    case 'tenant':
+      return '/tenant/login'
+    case 'store':
+      return '/store/login'
+    case 'staff':
+      return '/staff/login'
+    default:
+      return '/login'
+  }
+}
+
+/**
  * 共通リクエスト関数
  *
  * @param url - リクエストURL
@@ -33,8 +89,8 @@ async function apiRequest<T>(
   url: string,
   options: RequestInit = {}
 ): Promise<T> {
-  // 認証トークンを自動取得
-  const token = localStorage.getItem('tenant_token')
+  // 認証トークンを自動取得（アプリ別）
+  const token = localStorage.getItem(getTokenKey())
 
   const response = await fetch(url, {
     ...options,
@@ -49,9 +105,10 @@ async function apiRequest<T>(
   if (!response.ok) {
     // 401: 認証エラー → 自動でログインページへ
     if (response.status === 401) {
-      localStorage.removeItem('tenant_token')
-      localStorage.removeItem('tenant_user')
-      window.location.href = '/login'
+      const app = getCurrentApp()
+      localStorage.removeItem(getTokenKey(app))
+      localStorage.removeItem(getUserKey(app))
+      window.location.href = getLoginPath(app)
       throw new ApiError(401, 'Unauthorized')
     }
 
