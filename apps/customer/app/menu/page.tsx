@@ -19,6 +19,7 @@ export default function MenuPage() {
   const [error, setError] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [session, setSession] = useState<any>(null)
+  const [showCart, setShowCart] = useState(false)
   const categoryRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   // セッション確認とメニュー読み込み
@@ -83,6 +84,9 @@ export default function MenuPage() {
     (sum, item) => sum + item.menuItem.price * item.quantity,
     0
   )
+
+  // カート内アイテム数
+  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
 
   // 注文送信
   const handleSubmitOrder = async () => {
@@ -234,9 +238,33 @@ export default function MenuPage() {
           </div>
 
           {/* カート */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-4 sticky top-24">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">カート</h2>
+          <div className={`
+            lg:col-span-1
+            ${showCart ? 'fixed inset-0 z-40 lg:relative lg:z-0' : 'hidden lg:block'}
+          `}>
+            {/* モバイル用背景オーバーレイ */}
+            {showCart && (
+              <div
+                onClick={() => setShowCart(false)}
+                className="lg:hidden absolute inset-0 bg-black bg-opacity-50"
+              />
+            )}
+
+            {/* カート本体 */}
+            <div className={`
+              bg-white rounded-lg shadow-sm p-4
+              ${showCart ? 'absolute bottom-0 left-0 right-0 lg:relative max-h-[80vh] overflow-y-auto' : ''}
+              lg:sticky lg:top-24
+            `}>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-gray-900">カート</h2>
+                <button
+                  onClick={() => setShowCart(false)}
+                  className="lg:hidden text-gray-600 hover:text-gray-800 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
 
               {cart.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-8">
@@ -309,6 +337,35 @@ export default function MenuPage() {
           </div>
         </div>
       </div>
+
+      {/* 固定カートボタン（左下） */}
+      <button
+        onClick={() => setShowCart(true)}
+        className="fixed bottom-6 left-6 lg:hidden bg-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all z-50"
+      >
+        {/* カートアイコン */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+          stroke="currentColor"
+          className="w-8 h-8"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"
+          />
+        </svg>
+
+        {/* アイテム数バッジ */}
+        {cartItemCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+            {cartItemCount}
+          </span>
+        )}
+      </button>
     </div>
   )
 }
