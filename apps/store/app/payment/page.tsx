@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Order, Payment, PaymentMethod, StoreUser } from '../../../../types/store'
+import { fetchOrders } from '@/lib/api/store/orders'
+import { fetchPayments, createPayment } from '@/lib/api/store/payments'
+import type { Order } from '@/lib/api/store/orders'
+import type { Payment, PaymentCreateRequest } from '@/lib/api/store/payments'
+import type { StoreUser } from '../../../../types/store'
+import { ApiError } from '@/lib/api/client'
+
+type PaymentMethod = 'cash' | 'credit_card' | 'qr_code' | 'other'
 
 export default function PaymentPage() {
   const [user, setUser] = useState<StoreUser | null>(null)
@@ -12,6 +19,7 @@ export default function PaymentPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [processing, setProcessing] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
 
@@ -25,44 +33,40 @@ export default function PaymentPage() {
     }
 
     setUser(JSON.parse(userStr))
-    fetchOrders(token)
-    fetchPayments(token)
+    loadData()
     setLoading(false)
+
+    // 5秒ごとに自動リフレッシュ
+    const interval = setInterval(() => {
+      loadData()
+    }, 5000)
+
+    return () => clearInterval(interval)
   }, [router])
 
-  const fetchOrders = async (token: string) => {
+  const loadData = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/store/orders?status=delivered', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setOrders(data)
-      }
+      const [ordersData, paymentsData] = await Promise.all([
+        fetchOrders('delivered'),
+        fetchPayments()
+      ])
+      setOrders(ordersData)
+      setPayments(paymentsData)
+      setError('')
     } catch (err) {
-      console.error('注文取得エラー:', err)
+      console.error('データ取得エラー:', err)
+      if (err instanceof ApiError) {
+        setError('データの取得に失敗しました')
+      }
     }
   }
 
-  const fetchPayments = async (token: string) => {
+  const handleRefresh = async () => {
+    setRefreshing(true)
     try {
-      const response = await fetch('http://localhost:3000/api/store/payments', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setPayments(data)
-      }
-    } catch (err) {
-      console.error('会計履歴取得エラー:', err)
+      await loadData()
+    } finally {
+      setRefreshing(false)
     }
   }
 
@@ -76,32 +80,26 @@ export default function PaymentPage() {
     setError('')
 
     try {
-      const token = localStorage.getItem('store_token')
-      const response = await fetch('http://localhost:3000/api/store/payments', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const paymentData: PaymentCreateRequest = {
+        payment: {
           order_id: selectedOrder.id,
-          payment_method: paymentMethod,
-          amount: selectedOrder.total_amount
-        }),
-      })
-
-      if (response.ok) {
-        setSelectedOrder(null)
-        setPaymentMethod('cash')
-        await fetchOrders(token!)
-        await fetchPayments(token!)
-        alert('会計が完了しました')
-      } else {
-        const data = await response.json()
-        setError(data.error || '会計処理に失敗しました')
+          payment_method: paymentMethod
+        }
       }
+
+      await createPayment(paymentData)
+
+      setSelectedOrder(null)
+      setPaymentMethod('cash')
+      await loadData()
+      alert('会計が完了しました')
     } catch (err) {
-      setError('サーバーに接続できません')
+      console.error('会計処理エラー:', err)
+      if (err instanceof ApiError) {
+        setError(err.data?.error || '会計処理に失敗しました')
+      } else {
+        setError('サーバーに接続できません')
+      }
     } finally {
       setProcessing(false)
     }
@@ -117,7 +115,8 @@ export default function PaymentPage() {
     const labels: Record<PaymentMethod, string> = {
       cash: '現金',
       credit_card: 'クレジットカード',
-      qr_code: 'QRコード決済'
+      qr_code: 'QRコード決済',
+      other: 'その他'
     }
     return labels[method]
   }
@@ -151,6 +150,13 @@ export default function PaymentPage() {
             </div>
             <div className="flex items-center space-x-4">
               <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+              >
+                {refreshing ? '更新中...' : '手動更新'}
+              </button>
+              <button
                 onClick={() => router.push('/order')}
                 className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
               >
@@ -175,6 +181,12 @@ export default function PaymentPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {error && (
+          <div className="mb-4 rounded bg-red-100 p-4 text-red-700">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-6">
           <div>
             <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -203,7 +215,7 @@ export default function PaymentPage() {
                       </div>
 
                       <div className="space-y-1">
-                        {order.order_items.map(item => (
+                        {order.order_items.map((item: any) => (
                           <div key={item.id} className="flex justify-between text-sm">
                             <span>{item.menu_item_name}</span>
                             <span>×{item.quantity}</span>
@@ -234,7 +246,7 @@ export default function PaymentPage() {
                     </div>
 
                     <div className="space-y-2 mb-3 border-t pt-3">
-                      {selectedOrder.order_items.map(item => (
+                      {selectedOrder.order_items.map((item: any) => (
                         <div key={item.id} className="flex justify-between">
                           <span>{item.menu_item_name} ×{item.quantity}</span>
                           <span>¥{item.unit_price * item.quantity}</span>
@@ -299,8 +311,8 @@ export default function PaymentPage() {
                     <div key={payment.id} className="border-b pb-2">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-bold">{payment.order_number}</p>
-                          <p className="text-xs text-gray-600">{formatTime(payment.paid_at!)}</p>
+                          <p className="font-bold">{payment.order.order_number}</p>
+                          <p className="text-xs text-gray-600">{formatTime(payment.created_at)}</p>
                           <p className="text-xs text-gray-600">{getPaymentMethodLabel(payment.payment_method)}</p>
                         </div>
                         <p className="font-bold text-green-600">¥{payment.amount}</p>

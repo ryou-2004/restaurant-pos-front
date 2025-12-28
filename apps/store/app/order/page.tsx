@@ -100,12 +100,14 @@ export default function OrderPage() {
 
     try {
       const orderData: OrderCreateRequest = {
-        table_id: selectedTableId,
-        order_items_attributes: cart.map(item => ({
-          menu_item_id: item.menuItem.id,
-          quantity: item.quantity,
-          notes: item.notes
-        }))
+        order: {
+          table_id: selectedTableId,
+          order_items_attributes: cart.map(item => ({
+            menu_item_id: item.menuItem.id,
+            quantity: item.quantity,
+            notes: item.notes
+          }))
+        }
       }
 
       await createOrder(orderData)
