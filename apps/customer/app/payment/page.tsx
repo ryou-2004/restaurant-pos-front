@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchOrders, Order } from '@/lib/api/customer/orders'
+import TabBar from '../../components/TabBar'
 
 export default function PaymentPage() {
   const router = useRouter()
@@ -47,7 +48,7 @@ export default function PaymentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col pb-16">
       {/* ヘッダー */}
       <header className="bg-white shadow-sm p-4">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
@@ -137,6 +138,9 @@ export default function PaymentPage() {
           </p>
         </div>
       </div>
+
+      {/* 下部タブバー */}
+      <TabBar />
     </div>
   )
 }

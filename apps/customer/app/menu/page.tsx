@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchMenuItems, MenuItem } from '@/lib/api/customer/menu-items'
 import { createOrder, CreateOrderRequest } from '@/lib/api/customer/orders'
+import TabBar from '../../components/TabBar'
 
 interface CartItem {
   menuItem: MenuItem
@@ -157,7 +158,7 @@ export default function MenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-16">
       {/* ヘッダー */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -358,11 +359,11 @@ export default function MenuPage() {
         </div>
       </div>
 
-      {/* 固定カートボタン（右下） - カート非表示時のみ表示 */}
+      {/* 固定カートボタン（右下・タブバーの上） - カート非表示時のみ表示 */}
       {!showCart && (
         <button
           onClick={() => setShowCart(true)}
-          className="fixed bottom-6 right-6 lg:hidden bg-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all z-50"
+          className="fixed bottom-20 right-6 lg:hidden bg-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-blue-700 transition-all z-50"
         >
         {/* カートアイコン */}
         <svg
@@ -388,6 +389,9 @@ export default function MenuPage() {
         )}
       </button>
       )}
+
+      {/* 下部タブバー */}
+      <TabBar />
     </div>
   )
 }
