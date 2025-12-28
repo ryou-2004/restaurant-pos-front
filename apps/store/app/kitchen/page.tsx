@@ -15,6 +15,7 @@ export default function KitchenPage() {
   const [readyOrders, setReadyOrders] = useState<Order[]>([])
   const [deliveredOrders, setDeliveredOrders] = useState<Order[]>([])
   const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string>('')
   const router = useRouter()
 
   useEffect(() => {
@@ -47,23 +48,30 @@ export default function KitchenPage() {
       setQueues(queuesData)
       setReadyOrders(readyOrdersData)
       setDeliveredOrders(deliveredOrdersData)
+      setError('')
     } catch (err) {
       console.error('データ取得エラー:', err)
+      setError('データの取得に失敗しました')
     }
   }
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await fetchData()
-    setRefreshing(false)
+    try {
+      await fetchData()
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   const handleStart = async (queueId: number) => {
     try {
       await startQueue(queueId)
       await fetchData()
+      setError('')
     } catch (err) {
       console.error('調理開始エラー:', err)
+      setError('調理開始に失敗しました')
     }
   }
 
@@ -71,8 +79,10 @@ export default function KitchenPage() {
     try {
       await completeQueue(queueId)
       await fetchData()
+      setError('')
     } catch (err) {
       console.error('調理完了エラー:', err)
+      setError('調理完了の処理に失敗しました')
     }
   }
 
@@ -80,8 +90,10 @@ export default function KitchenPage() {
     try {
       await deliverOrder(orderId)
       await fetchData()
+      setError('')
     } catch (err) {
       console.error('配膳完了エラー:', err)
+      setError('配膳完了の処理に失敗しました')
     }
   }
 
@@ -172,6 +184,12 @@ export default function KitchenPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {error && (
+          <div className="mb-4 rounded bg-red-100 p-4 text-red-700">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-4 gap-4">
           {/* 待機中 */}
           <div>
