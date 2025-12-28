@@ -14,6 +14,7 @@ export interface MenuItem {
   name: string
   price: number
   category: string
+  category_order: number
   description?: string
   available: boolean
   created_at: string
