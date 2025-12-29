@@ -36,6 +36,16 @@ export default function PaymentPage() {
   // 合計金額を計算
   const totalAmount = orders.reduce((sum, order) => sum + order.total_amount, 0)
 
+  // 全注文の商品をフラットに展開
+  const allItems = orders.flatMap((order) =>
+    order.order_items.map((item) => ({
+      id: `${order.id}-${item.id}`,
+      name: item.menu_item_name,
+      quantity: item.quantity,
+      subtotal: item.subtotal,
+    }))
+  )
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -108,25 +118,18 @@ export default function PaymentPage() {
           {/* 注文内訳 */}
           <div className="bg-gray-50 rounded-lg p-6 mb-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">ご注文内容</h2>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {orders.map((order) => (
-                <div key={order.id} className="border-b pb-3 last:border-b-0">
-                  <p className="text-sm text-gray-600 mb-2">
-                    注文番号: {order.order_number}
-                  </p>
-                  {order.order_items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex justify-between text-sm"
-                    >
-                      <span className="text-gray-700">
-                        {item.menu_item_name} × {item.quantity}
-                      </span>
-                      <span className="text-gray-900 font-medium">
-                        ¥{item.subtotal.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {allItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex justify-between text-sm py-2 border-b last:border-b-0"
+                >
+                  <span className="text-gray-700">
+                    {item.name} × {item.quantity}
+                  </span>
+                  <span className="text-gray-900 font-medium">
+                    ¥{item.subtotal.toLocaleString()}
+                  </span>
                 </div>
               ))}
             </div>
