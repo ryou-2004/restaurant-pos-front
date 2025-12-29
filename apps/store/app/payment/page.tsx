@@ -3,13 +3,40 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { fetchTableSessions, completeTableSession } from '@/lib/api/store/table-sessions'
-import { fetchPayments, createPayment } from '@/lib/api/store/payments'
+import { apiGet, apiPost } from '@/lib/api/client'
 import type { TableSession } from '@/lib/api/store/table-sessions'
-import type { Payment, PaymentCreateRequest } from '@/lib/api/store/payments'
 import type { StoreUser } from '../../../../types/store'
 import { ApiError } from '@/lib/api/client'
 
 type PaymentMethod = 'cash' | 'credit_card' | 'qr_code' | 'other'
+
+// 更新された Payment型定義
+interface Payment {
+  id: number
+  table_session_id: number
+  payment_method: PaymentMethod
+  amount: number
+  status: 'pending' | 'completed' | 'failed'
+  notes?: string
+  table_session?: {
+    id: number
+    table_id: number
+    party_size?: number
+    order_count: number
+    total_amount: number
+    duration_minutes: number
+    status: string
+  }
+  created_at: string
+  updated_at: string
+}
+
+interface PaymentCreateData {
+  payment: {
+    table_session_id: number
+    payment_method: PaymentMethod
+  }
+}
 
 export default function PaymentPage() {
   const [user, setUser] = useState<StoreUser | null>(null)
@@ -48,7 +75,7 @@ export default function PaymentPage() {
     try {
       const [sessionsData, paymentsData] = await Promise.all([
         fetchTableSessions(),
-        fetchPayments()
+        apiGet<Payment[]>('http://localhost:3000/api/store/payments')
       ])
       setTableSessions(sessionsData)
       setPayments(paymentsData)
@@ -80,14 +107,14 @@ export default function PaymentPage() {
     setError('')
 
     try {
-      const paymentData: PaymentCreateRequest = {
+      const paymentData: PaymentCreateData = {
         payment: {
           table_session_id: selectedSession.id,
           payment_method: paymentMethod
         }
       }
 
-      await createPayment(paymentData)
+      await apiPost('http://localhost:3000/api/store/payments', paymentData)
 
       // 会計完了後にテーブルセッションを終了
       await completeTableSession(selectedSession.id)

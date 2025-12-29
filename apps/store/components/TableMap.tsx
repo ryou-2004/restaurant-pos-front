@@ -5,6 +5,7 @@ interface Table {
   number: string
   capacity: number
   status: 'available' | 'reserved' | 'occupied' | 'cleaning'
+  qr_code: string
   position_x: number
   position_y: number
   shape: 'square' | 'rectangle' | 'circle'

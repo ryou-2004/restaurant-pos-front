@@ -9,7 +9,7 @@ interface Table {
   id: number
   number: string
   capacity: number
-  status: 'available' | 'reserved' | 'occupied'
+  status: 'available' | 'reserved' | 'occupied' | 'cleaning'
   qr_code: string
   position_x: number
   position_y: number
