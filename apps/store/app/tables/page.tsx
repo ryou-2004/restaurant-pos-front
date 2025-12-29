@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createTableSession } from '@/lib/api/store/table-sessions'
+import TableMap from '../../components/TableMap'
 
 interface Table {
   id: number
@@ -10,6 +11,9 @@ interface Table {
   capacity: number
   status: 'available' | 'reserved' | 'occupied'
   qr_code: string
+  position_x: number
+  position_y: number
+  shape: 'square' | 'rectangle' | 'circle'
 }
 
 interface TableSession {
@@ -31,6 +35,7 @@ export default function TablesPage() {
   const [partySize, setPartySize] = useState<number>(2)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string>('')
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('map')  // デフォルトはマップ表示
 
   useEffect(() => {
     const session = localStorage.getItem('store_session')
@@ -141,15 +146,53 @@ export default function TablesPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* ヘッダー */}
-      <div className="max-w-7xl mx-auto mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">テーブル管理</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          顧客を案内してセッションを開始してください
-        </p>
+      <div className="max-w-7xl mx-auto mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">テーブル管理</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            顧客を案内してセッションを開始してください
+          </p>
+        </div>
+
+        {/* 表示切替ボタン */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode('map')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              viewMode === 'map'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            マップ表示
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            リスト表示
+          </button>
+        </div>
       </div>
 
-      {/* テーブル一覧 */}
-      <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {/* マップ表示 */}
+      {viewMode === 'map' && (
+        <div className="max-w-7xl mx-auto">
+          <TableMap
+            tables={tables}
+            sessions={sessions}
+            onTableClick={handleStartSession}
+          />
+        </div>
+      )}
+
+      {/* リスト表示 */}
+      {viewMode === 'list' && (
+        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {tables.map((table) => {
           const status = getTableStatus(table)
           const session = sessions[table.id]
@@ -205,7 +248,8 @@ export default function TablesPage() {
             </div>
           )
         })}
-      </div>
+        </div>
+      )}
 
       {/* 案内モーダル */}
       {showModal && selectedTable && (
