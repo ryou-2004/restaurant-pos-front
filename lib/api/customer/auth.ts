@@ -14,6 +14,7 @@ export interface QRLoginResponse {
   session: {
     table_id: number
     table_number: string
+    table_session_id: number
     store_id: number
     store_name: string
     tenant_id: number
