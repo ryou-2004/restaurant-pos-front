@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { fetchOrders } from '@/lib/api/store/orders'
+import { fetchTableSessions, completeTableSession } from '@/lib/api/store/table-sessions'
 import { fetchPayments, createPayment } from '@/lib/api/store/payments'
-import type { Order } from '@/lib/api/store/orders'
+import type { TableSession } from '@/lib/api/store/table-sessions'
 import type { Payment, PaymentCreateRequest } from '@/lib/api/store/payments'
 import type { StoreUser } from '../../../../types/store'
 import { ApiError } from '@/lib/api/client'
@@ -14,9 +14,9 @@ type PaymentMethod = 'cash' | 'credit_card' | 'qr_code' | 'other'
 export default function PaymentPage() {
   const [user, setUser] = useState<StoreUser | null>(null)
   const [loading, setLoading] = useState(true)
-  const [orders, setOrders] = useState<Order[]>([])
+  const [tableSessions, setTableSessions] = useState<TableSession[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [selectedSession, setSelectedSession] = useState<TableSession | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [processing, setProcessing] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -46,11 +46,11 @@ export default function PaymentPage() {
 
   const loadData = async () => {
     try {
-      const [ordersData, paymentsData] = await Promise.all([
-        fetchOrders('delivered'),
+      const [sessionsData, paymentsData] = await Promise.all([
+        fetchTableSessions(),
         fetchPayments()
       ])
-      setOrders(ordersData)
+      setTableSessions(sessionsData)
       setPayments(paymentsData)
       setError('')
     } catch (err) {
@@ -71,8 +71,8 @@ export default function PaymentPage() {
   }
 
   const handlePayment = async () => {
-    if (!selectedOrder) {
-      setError('注文を選択してください')
+    if (!selectedSession) {
+      setError('テーブルセッションを選択してください')
       return
     }
 
@@ -82,14 +82,17 @@ export default function PaymentPage() {
     try {
       const paymentData: PaymentCreateRequest = {
         payment: {
-          order_id: selectedOrder.id,
+          table_session_id: selectedSession.id,
           payment_method: paymentMethod
         }
       }
 
       await createPayment(paymentData)
 
-      setSelectedOrder(null)
+      // 会計完了後にテーブルセッションを終了
+      await completeTableSession(selectedSession.id)
+
+      setSelectedSession(null)
       setPaymentMethod('cash')
       await loadData()
       alert('会計が完了しました')
@@ -190,37 +193,34 @@ export default function PaymentPage() {
         <div className="grid grid-cols-2 gap-6">
           <div>
             <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <h2 className="text-xl font-bold mb-4">配膳済み注文（未会計）</h2>
+              <h2 className="text-xl font-bold mb-4">アクティブなテーブルセッション（未会計）</h2>
 
-              {orders.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">未会計の注文はありません</p>
+              {tableSessions.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">未会計のテーブルはありません</p>
               ) : (
                 <div className="space-y-3">
-                  {orders.map(order => (
+                  {tableSessions.map(session => (
                     <div
-                      key={order.id}
-                      onClick={() => setSelectedOrder(order)}
+                      key={session.id}
+                      onClick={() => setSelectedSession(session)}
                       className={`border rounded-lg p-4 cursor-pointer ${
-                        selectedOrder?.id === order.id
+                        selectedSession?.id === session.id
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-300 hover:bg-gray-50'
                       }`}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-bold text-lg">{order.order_number}</p>
-                          <p className="text-sm text-gray-600">テーブル {order.table_id}</p>
+                          <p className="font-bold text-lg">テーブル {session.table_number}</p>
+                          <p className="text-sm text-gray-600">
+                            {session.party_size ? `${session.party_size}名様` : '人数未設定'} • 滞在 {session.duration_minutes}分
+                          </p>
                         </div>
-                        <p className="text-xl font-bold text-blue-600">¥{order.total_amount}</p>
+                        <p className="text-xl font-bold text-blue-600">¥{session.total_amount?.toLocaleString() || 0}</p>
                       </div>
 
-                      <div className="space-y-1">
-                        {order.order_items.map((item: any) => (
-                          <div key={item.id} className="flex justify-between text-sm">
-                            <span>{item.menu_item_name}</span>
-                            <span>×{item.quantity}</span>
-                          </div>
-                        ))}
+                      <div className="text-sm text-gray-600">
+                        注文 {session.order_count || 0}件
                       </div>
                     </div>
                   ))}
@@ -233,31 +233,27 @@ export default function PaymentPage() {
             <div className="bg-white rounded-lg shadow p-6 mb-6">
               <h2 className="text-xl font-bold mb-4">会計処理</h2>
 
-              {!selectedOrder ? (
-                <p className="text-gray-500 text-center py-8">注文を選択してください</p>
+              {!selectedSession ? (
+                <p className="text-gray-500 text-center py-8">テーブルセッションを選択してください</p>
               ) : (
                 <>
                   <div className="border rounded-lg p-4 mb-4 bg-gray-50">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <p className="font-bold text-lg">{selectedOrder.order_number}</p>
-                        <p className="text-sm text-gray-600">テーブル {selectedOrder.table_id}</p>
+                        <p className="font-bold text-lg">テーブル {selectedSession.table_number}</p>
+                        <p className="text-sm text-gray-600">
+                          {selectedSession.party_size ? `${selectedSession.party_size}名様` : '人数未設定'} • 滞在 {selectedSession.duration_minutes}分
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          注文 {selectedSession.order_count || 0}件
+                        </p>
                       </div>
-                    </div>
-
-                    <div className="space-y-2 mb-3 border-t pt-3">
-                      {selectedOrder.order_items.map((item: any) => (
-                        <div key={item.id} className="flex justify-between">
-                          <span>{item.menu_item_name} ×{item.quantity}</span>
-                          <span>¥{item.unit_price * item.quantity}</span>
-                        </div>
-                      ))}
                     </div>
 
                     <div className="border-t pt-3">
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-bold">合計金額</span>
-                        <span className="text-3xl font-bold text-blue-600">¥{selectedOrder.total_amount}</span>
+                        <span className="text-3xl font-bold text-blue-600">¥{selectedSession.total_amount?.toLocaleString() || 0}</span>
                       </div>
                     </div>
                   </div>
@@ -311,11 +307,13 @@ export default function PaymentPage() {
                     <div key={payment.id} className="border-b pb-2">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-bold">{payment.order.order_number}</p>
+                          <p className="font-bold">
+                            テーブル {payment.table_session?.table_id || '不明'}
+                          </p>
                           <p className="text-xs text-gray-600">{formatTime(payment.created_at)}</p>
                           <p className="text-xs text-gray-600">{getPaymentMethodLabel(payment.payment_method)}</p>
                         </div>
-                        <p className="font-bold text-green-600">¥{payment.amount}</p>
+                        <p className="font-bold text-green-600">¥{payment.amount.toLocaleString()}</p>
                       </div>
                     </div>
                   ))}

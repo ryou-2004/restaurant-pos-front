@@ -2,7 +2,7 @@
  * 店舗向けTableSession API
  */
 
-import { apiPost, apiPatch } from '../client'
+import { apiGet, apiPost, apiPatch } from '../client'
 
 const BASE_URL = 'http://localhost:3000/api/store/table_sessions'
 
@@ -26,6 +26,17 @@ export interface TableSession {
   started_at: string
   ended_at?: string
   duration_minutes?: number
+  order_count?: number
+  total_amount?: number
+}
+
+/**
+ * アクティブなTableSession一覧取得
+ *
+ * @returns アクティブなセッション一覧
+ */
+export async function fetchTableSessions(): Promise<TableSession[]> {
+  return apiGet<TableSession[]>(BASE_URL)
 }
 
 /**
