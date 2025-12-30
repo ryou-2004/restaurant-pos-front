@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createTableSession } from '@/lib/api/store/table-sessions'
 import TableMap from '../../components/TableMap'
+import StoreSwitcher from '../../components/StoreSwitcher'
 
 interface Table {
   id: number
@@ -154,8 +155,10 @@ export default function TablesPage() {
           </p>
         </div>
 
-        {/* 表示切替ボタン */}
-        <div className="flex gap-2">
+        {/* 店舗切替と表示切替 */}
+        <div className="flex gap-3 items-center">
+          <StoreSwitcher />
+          <div className="flex gap-2">
           <button
             onClick={() => setViewMode('map')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -176,6 +179,7 @@ export default function TablesPage() {
           >
             リスト表示
           </button>
+          </div>
         </div>
       </div>
 

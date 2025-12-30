@@ -29,7 +29,8 @@ export default function LoginPage() {
       if (response.ok && 'token' in data) {
         localStorage.setItem('store_token', data.token)
         localStorage.setItem('store_user', JSON.stringify(data.user))
-        router.push('/order')
+        // 店舗選択画面へリダイレクト
+        router.push('/select-store')
       } else {
         setError('error' in data ? data.error : 'ログインに失敗しました')
       }
