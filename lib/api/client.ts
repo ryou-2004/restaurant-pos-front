@@ -100,57 +100,113 @@ function getLoginPath(app?: string): string {
 }
 
 /**
- * 共通リクエスト関数
+ * リトライ設定
+ */
+interface RetryOptions {
+  maxRetries: number
+  retryDelay: number
+  retryableStatuses: number[]
+}
+
+const DEFAULT_RETRY_OPTIONS: RetryOptions = {
+  maxRetries: 3,
+  retryDelay: 1000, // 1秒
+  retryableStatuses: [500, 502, 503, 504], // サーバーエラーのみリトライ
+}
+
+/**
+ * 遅延処理
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * 共通リクエスト関数（リトライ機能付き）
  *
  * @param url - リクエストURL
  * @param options - fetchのオプション
+ * @param retryOptions - リトライ設定
  * @returns レスポンスのJSON
  */
 async function apiRequest<T>(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  retryOptions: RetryOptions = DEFAULT_RETRY_OPTIONS
 ): Promise<T> {
-  // 認証トークンを自動取得（アプリ別）
-  const token = localStorage.getItem(getTokenKey())
+  let lastError: Error | null = null
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...options.headers,
-    },
-  })
+  for (let attempt = 0; attempt <= retryOptions.maxRetries; attempt++) {
+    try {
+      // 認証トークンを自動取得（アプリ別）
+      const token = localStorage.getItem(getTokenKey())
 
-  // エラーハンドリング
-  if (!response.ok) {
-    // 401: 認証エラー → 自動でログインページへ
-    if (response.status === 401) {
-      const app = getCurrentApp()
-      localStorage.removeItem(getTokenKey(app))
-      localStorage.removeItem(getUserKey(app))
-      window.location.href = getLoginPath(app)
-      throw new ApiError(401, 'Unauthorized')
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+          ...options.headers,
+        },
+      })
+
+      // エラーハンドリング
+      if (!response.ok) {
+        // 401: 認証エラー → 自動でログインページへ（リトライしない）
+        if (response.status === 401) {
+          const app = getCurrentApp()
+          localStorage.removeItem(getTokenKey(app))
+          localStorage.removeItem(getUserKey(app))
+          window.location.href = getLoginPath(app)
+          throw new ApiError(401, 'Unauthorized')
+        }
+
+        // リトライ可能なステータスコードかチェック
+        if (retryOptions.retryableStatuses.includes(response.status)) {
+          const errorData = await response.json().catch(() => ({}))
+          lastError = new ApiError(response.status, response.statusText, errorData)
+
+          // 最後の試行でなければリトライ
+          if (attempt < retryOptions.maxRetries) {
+            console.log(`API リトライ ${attempt + 1}/${retryOptions.maxRetries}: ${url}`)
+            await delay(retryOptions.retryDelay * (attempt + 1)) // 指数バックオフ
+            continue
+          }
+
+          throw lastError
+        }
+
+        // リトライ不可のエラー（400番台など）
+        const errorData = await response.json().catch(() => ({}))
+        throw new ApiError(response.status, response.statusText, errorData)
+      }
+
+      // 204 No Content
+      if (response.status === 204) {
+        return undefined as T
+      }
+
+      return response.json()
+    } catch (error) {
+      // ネットワークエラー（接続失敗など）
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        lastError = new Error('ネットワークに接続できません')
+
+        // 最後の試行でなければリトライ
+        if (attempt < retryOptions.maxRetries) {
+          console.log(`ネットワークエラー - リトライ ${attempt + 1}/${retryOptions.maxRetries}`)
+          await delay(retryOptions.retryDelay * (attempt + 1))
+          continue
+        }
+      }
+
+      // その他のエラーはそのままスロー
+      throw error
     }
-
-    // 503: メンテナンス中 → メンテナンスページへ（TODO: 実装）
-    if (response.status === 503) {
-      // TODO: メンテナンスページへのリダイレクト
-      // window.location.href = '/maintenance'
-      throw new ApiError(503, 'Service Unavailable')
-    }
-
-    // その他のエラー
-    const errorData = await response.json().catch(() => ({}))
-    throw new ApiError(response.status, response.statusText, errorData)
   }
 
-  // 204 No Content
-  if (response.status === 204) {
-    return undefined as T
-  }
-
-  return response.json()
+  // 全てのリトライが失敗
+  throw lastError || new Error('リクエストに失敗しました')
 }
 
 /**

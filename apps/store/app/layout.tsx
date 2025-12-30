@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import OfflineNotification from '../components/OfflineNotification'
 
 export const metadata: Metadata = {
   title: 'Restaurant POS - Store',
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body>
+        <OfflineNotification />
+        {children}
+      </body>
     </html>
   )
 }
