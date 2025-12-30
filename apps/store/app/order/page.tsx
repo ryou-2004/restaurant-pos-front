@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { fetchMenuItems } from '@/lib/api/store/menu-items'
 import { fetchTables } from '@/lib/api/store/tables'
 import { createOrder } from '@/lib/api/store/orders'
+import { getPrintData, logPrintResult } from '@/lib/api/store/prints'
 import type { MenuItem } from '@/lib/api/store/menu-items'
 import type { Table } from '@/lib/api/store/tables'
 import type { OrderCreateRequest } from '@/lib/api/store/orders'
@@ -110,7 +111,15 @@ export default function OrderPage() {
         }
       }
 
-      await createOrder(orderData)
+      const newOrder = await createOrder(orderData)
+
+      // 自動印刷（プランで印刷機能が有効な場合）
+      try {
+        await printKitchenTicket(newOrder.id)
+      } catch (printError) {
+        // 印刷エラーは注文処理に影響させない
+        console.error('印刷エラー:', printError)
+      }
 
       // 注文成功後、カートをクリアして厨房画面へ
       setCart([])
@@ -122,6 +131,32 @@ export default function OrderPage() {
       }
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  // 厨房チケット印刷
+  const printKitchenTicket = async (orderId: number) => {
+    try {
+      const printData = await getPrintData(orderId)
+
+      // 新しいウィンドウで印刷
+      const printWindow = window.open('', '_blank', 'width=800,height=600')
+      if (printWindow) {
+        printWindow.document.write(printData.html)
+        printWindow.document.close()
+        printWindow.focus()
+        printWindow.print()
+        printWindow.close()
+
+        // 印刷成功をログ
+        await logPrintResult(orderId, printData.template_id, 'success')
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error('印刷エラー:', errorMessage)
+
+      // 印刷失敗をログ
+      await logPrintResult(orderId, 0, 'failed', errorMessage)
     }
   }
 
