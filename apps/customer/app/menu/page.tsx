@@ -21,6 +21,8 @@ export default function MenuPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [session, setSession] = useState<any>(null)
   const [showCart, setShowCart] = useState(false)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
   const categoryRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   // セッション確認とメニュー読み込み
@@ -146,6 +148,18 @@ export default function MenuPage() {
     }
   }
 
+  // 商品詳細モーダルを開く
+  const openDetailModal = (item: MenuItem) => {
+    setSelectedItem(item)
+    setShowDetailModal(true)
+  }
+
+  // 商品詳細モーダルを閉じる
+  const closeDetailModal = () => {
+    setShowDetailModal(false)
+    setSelectedItem(null)
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -214,7 +228,8 @@ export default function MenuPage() {
                   {items.map((item) => (
                     <div
                       key={item.id}
-                      className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                      className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => openDetailModal(item)}
                     >
                       {/* 商品画像 */}
                       {item.image_url && (
@@ -263,7 +278,10 @@ export default function MenuPage() {
                             ¥{item.price.toLocaleString()}
                           </span>
                           <button
-                            onClick={() => addToCart(item)}
+                            onClick={(e) => {
+                              e.stopPropagation() // モーダル開くのを防止
+                              addToCart(item)
+                            }}
                             className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
                           >
                             追加
@@ -427,6 +445,96 @@ export default function MenuPage() {
           </span>
         )}
       </button>
+      )}
+
+      {/* 商品詳細モーダル */}
+      {showDetailModal && selectedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* モーダルヘッダー */}
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">商品詳細</h2>
+              <button
+                onClick={closeDetailModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className="w-6 h-6"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* モーダルコンテンツ */}
+            <div className="p-6">
+              {/* 商品画像（大きめ） */}
+              {selectedItem.image_url && (
+                <div className="relative w-full h-64 bg-gray-200 rounded-lg overflow-hidden mb-4">
+                  <img
+                    src={selectedItem.image_url}
+                    alt={selectedItem.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* 商品名 */}
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">{selectedItem.name}</h3>
+
+              {/* 辛さレベル */}
+              {selectedItem.spice_level && selectedItem.spice_level > 0 && (
+                <div className="flex items-center mb-3">
+                  <span className="text-sm text-red-600 font-medium">
+                    🌶️ 辛さレベル: {Array(selectedItem.spice_level).fill('辛').join('')}
+                  </span>
+                </div>
+              )}
+
+              {/* 価格 */}
+              <div className="text-3xl font-bold text-blue-600 mb-4">
+                ¥{selectedItem.price.toLocaleString()}
+              </div>
+
+              {/* 説明文 */}
+              {selectedItem.description && (
+                <div className="mb-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">商品説明</h4>
+                  <p className="text-gray-700 whitespace-pre-wrap">{selectedItem.description}</p>
+                </div>
+              )}
+
+              {/* アレルゲン情報 */}
+              {selectedItem.allergens && (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
+                    ⚠️ アレルゲン情報
+                  </h4>
+                  <p className="text-gray-700">{selectedItem.allergens}</p>
+                </div>
+              )}
+
+              {/* カートに追加ボタン */}
+              <button
+                onClick={() => {
+                  addToCart(selectedItem)
+                  closeDetailModal()
+                }}
+                className="w-full px-6 py-4 bg-blue-600 text-white font-bold text-lg rounded-md hover:bg-blue-700"
+              >
+                カートに追加
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 下部タブバー */}
