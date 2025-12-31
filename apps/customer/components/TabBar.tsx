@@ -1,14 +1,45 @@
 'use client'
 
+import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { callStaff, CALL_TYPE_LABELS, CallType } from '@/lib/api/customer/staff-calls'
 
 export default function TabBar() {
   const pathname = usePathname()
   const router = useRouter()
+  const [showCallModal, setShowCallModal] = useState(false)
+  const [selectedCallType, setSelectedCallType] = useState<CallType>('general')
+  const [isCalling, setIsCalling] = useState(false)
 
-  const handleStaffCall = () => {
-    if (confirm('スタッフをお呼びしますか？')) {
-      alert('スタッフを呼び出しました。お待ちください。')
+  const handleStaffCallClick = () => {
+    setShowCallModal(true)
+  }
+
+  const handleConfirmCall = async () => {
+    setIsCalling(true)
+    try {
+      await callStaff({ call_type: selectedCallType })
+
+      // バイブレーション
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate([100, 50, 100])
+      }
+
+      // 音声アラート（ブラウザのbeep音）
+      if (typeof window !== 'undefined') {
+        const audio = new Audio('/notification.mp3')
+        audio.play().catch(() => {
+          // 音声再生失敗時は無視（ファイルがない場合など）
+        })
+      }
+
+      setShowCallModal(false)
+      alert('スタッフを呼び出しました。少々お待ちください。')
+      setSelectedCallType('general')
+    } catch (err: any) {
+      alert(err.message || '呼び出しに失敗しました')
+    } finally {
+      setIsCalling(false)
     }
   }
 
@@ -99,33 +130,78 @@ export default function TabBar() {
         </svg>
       ),
       path: null,
-      action: handleStaffCall
+      action: handleStaffCallClick
     }
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-inset-bottom z-40">
-      <div className="grid grid-cols-4 max-w-3xl mx-auto">
-        {tabs.map((tab) => {
-          const isActive = tab.path && pathname === tab.path
-          return (
-            <button
-              key={tab.id}
-              onClick={tab.action}
-              className={`flex flex-col items-center justify-center py-2 px-1 transition-colors ${
-                isActive
-                  ? 'text-blue-600'
-                  : 'text-gray-600 hover:text-blue-600'
-              }`}
-            >
-              <div className={isActive ? 'scale-110' : ''}>
-                {tab.icon}
-              </div>
-              <span className="text-xs mt-1 font-medium">{tab.label}</span>
-            </button>
-          )
-        })}
+    <>
+      {/* タブバー */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-inset-bottom z-40">
+        <div className="grid grid-cols-4 max-w-3xl mx-auto">
+          {tabs.map((tab) => {
+            const isActive = tab.path && pathname === tab.path
+            return (
+              <button
+                key={tab.id}
+                onClick={tab.action}
+                className={`flex flex-col items-center justify-center py-2 px-1 transition-colors ${
+                  isActive
+                    ? 'text-blue-600'
+                    : 'text-gray-600 hover:text-blue-600'
+                }`}
+              >
+                <div className={isActive ? 'scale-110' : ''}>
+                  {tab.icon}
+                </div>
+                <span className="text-xs mt-1 font-medium">{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
-    </div>
+
+      {/* 店員呼び出しモーダル */}
+      {showCallModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              スタッフを呼び出す
+            </h3>
+            <div className="space-y-2 mb-6">
+              {(Object.entries(CALL_TYPE_LABELS) as [CallType, string][]).map(([type, label]) => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedCallType(type)}
+                  className={`w-full px-4 py-3 rounded-lg border-2 text-left transition-colors ${
+                    selectedCallType === type
+                      ? 'border-blue-600 bg-blue-50 text-blue-900'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="font-medium">{label}</div>
+                </button>
+              ))}
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowCallModal(false)}
+                disabled={isCalling}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleConfirmCall}
+                disabled={isCalling}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isCalling ? '呼び出し中...' : '呼び出す'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
