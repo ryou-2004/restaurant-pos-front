@@ -23,6 +23,7 @@ export default function MenuPage() {
   const [showCart, setShowCart] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
+  const [itemNotes, setItemNotes] = useState('')
   const categoryRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
   // セッション確認とメニュー読み込み
@@ -50,17 +51,19 @@ export default function MenuPage() {
   }
 
   // カートに追加
-  const addToCart = (menuItem: MenuItem) => {
+  const addToCart = (menuItem: MenuItem, notes?: string) => {
     setCart((prev) => {
-      const existing = prev.find((item) => item.menuItem.id === menuItem.id)
+      const existing = prev.find((item) => item.menuItem.id === menuItem.id && item.notes === notes)
       if (existing) {
+        // 同じ商品・同じメモの場合は数量を増やす
         return prev.map((item) =>
-          item.menuItem.id === menuItem.id
+          item.menuItem.id === menuItem.id && item.notes === notes
             ? { ...item, quantity: item.quantity + 1 }
             : item
         )
       }
-      return [...prev, { menuItem, quantity: 1 }]
+      // 新しいアイテムまたは異なるメモの場合は新規追加
+      return [...prev, { menuItem, quantity: 1, notes }]
     })
   }
 
@@ -158,6 +161,7 @@ export default function MenuPage() {
   const closeDetailModal = () => {
     setShowDetailModal(false)
     setSelectedItem(null)
+    setItemNotes('') // メモをクリア
   }
 
   if (isLoading) {
@@ -343,6 +347,11 @@ export default function MenuPage() {
                           <p className="text-sm text-gray-600">
                             ¥{item.menuItem.price.toLocaleString()}
                           </p>
+                          {item.notes && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              📝 {item.notes}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center space-x-2">
                           <button
@@ -514,7 +523,7 @@ export default function MenuPage() {
 
               {/* アレルゲン情報 */}
               {selectedItem.allergens && (
-                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
                     ⚠️ アレルゲン情報
                   </h4>
@@ -522,10 +531,22 @@ export default function MenuPage() {
                 </div>
               )}
 
+              {/* 注文時のメモ */}
+              <div className="mb-6">
+                <h4 className="font-semibold text-gray-900 mb-2">ご要望・メモ（任意）</h4>
+                <textarea
+                  value={itemNotes}
+                  onChange={(e) => setItemNotes(e.target.value)}
+                  placeholder="例: 氷少なめ、辛さ控えめ、アレルギー対応など"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows={3}
+                />
+              </div>
+
               {/* カートに追加ボタン */}
               <button
                 onClick={() => {
-                  addToCart(selectedItem)
+                  addToCart(selectedItem, itemNotes || undefined)
                   closeDetailModal()
                 }}
                 className="w-full px-6 py-4 bg-blue-600 text-white font-bold text-lg rounded-md hover:bg-blue-700"
