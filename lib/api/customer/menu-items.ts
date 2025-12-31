@@ -17,6 +17,9 @@ export interface MenuItem {
   category_order: number
   description?: string
   available: boolean
+  image_url?: string        // 商品画像URL
+  allergens?: string        // アレルゲン情報
+  spice_level?: number      // 辛さレベル（0-5）
   created_at: string
   updated_at: string
 }
