@@ -214,22 +214,61 @@ export default function MenuPage() {
                   {items.map((item) => (
                     <div
                       key={item.id}
-                      className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow"
+                      className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                     >
-                      <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                      {item.description && (
-                        <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                      {/* 商品画像 */}
+                      {item.image_url && (
+                        <div className="relative w-full h-48 bg-gray-200">
+                          <img
+                            src={item.image_url}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // 画像読み込み失敗時はプレースホルダーを表示
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
+                        </div>
                       )}
-                      <div className="flex justify-between items-center mt-3">
-                        <span className="text-lg font-bold text-gray-900">
-                          ¥{item.price.toLocaleString()}
-                        </span>
-                        <button
-                          onClick={() => addToCart(item)}
-                          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
-                        >
-                          追加
-                        </button>
+
+                      <div className="p-4">
+                        {/* 商品名 */}
+                        <h3 className="font-semibold text-gray-900">{item.name}</h3>
+
+                        {/* 辛さレベル表示 */}
+                        {item.spice_level && item.spice_level > 0 && (
+                          <div className="flex items-center mt-1">
+                            <span className="text-xs text-red-600 font-medium">
+                              🌶️ {Array(item.spice_level).fill('辛').join('')}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* 説明文 */}
+                        {item.description && (
+                          <p className="text-sm text-gray-600 mt-2">{item.description}</p>
+                        )}
+
+                        {/* アレルゲン情報 */}
+                        {item.allergens && (
+                          <div className="mt-2 text-xs text-gray-500">
+                            <span className="font-medium">⚠️ アレルゲン: </span>
+                            {item.allergens}
+                          </div>
+                        )}
+
+                        {/* 価格と追加ボタン */}
+                        <div className="flex justify-between items-center mt-4">
+                          <span className="text-lg font-bold text-gray-900">
+                            ¥{item.price.toLocaleString()}
+                          </span>
+                          <button
+                            onClick={() => addToCart(item)}
+                            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                          >
+                            追加
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
