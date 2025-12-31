@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { fetchOrders, Order, OrderStatus } from '@/lib/api/customer/orders'
+import { fetchOrders, cancelOrder, Order, OrderStatus } from '@/lib/api/customer/orders'
 import { usePolling } from '../../hooks/usePolling'
 import TabBar from '../../components/TabBar'
 
@@ -47,6 +47,10 @@ const STATUS_CONFIG: Record<OrderStatus, {
 export default function OrdersPage() {
   const router = useRouter()
   const [session, setSession] = useState<any>(null)
+  const [cancelModalOpen, setCancelModalOpen] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [cancellationReason, setCancellationReason] = useState('')
+  const [isCancelling, setIsCancelling] = useState(false)
 
   // セッション確認
   useEffect(() => {
@@ -66,6 +70,31 @@ export default function OrdersPage() {
       enabled: !!session
     }
   )
+
+  // 注文キャンセルハンドラー
+  const handleCancelClick = (order: Order) => {
+    setSelectedOrder(order)
+    setCancellationReason('')
+    setCancelModalOpen(true)
+  }
+
+  const handleCancelConfirm = async () => {
+    if (!selectedOrder) return
+
+    setIsCancelling(true)
+    try {
+      await cancelOrder(selectedOrder.id, cancellationReason || 'お客様都合')
+      setCancelModalOpen(false)
+      setSelectedOrder(null)
+      setCancellationReason('')
+      await refetch() // 注文リストを再取得
+      alert('注文をキャンセルしました')
+    } catch (err: any) {
+      alert(err.message || 'キャンセルに失敗しました')
+    } finally {
+      setIsCancelling(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -199,6 +228,35 @@ export default function OrdersPage() {
                       </p>
                     </div>
                   )}
+
+                  {/* キャンセル済み表示 */}
+                  {order.cancelled && (
+                    <div className="mt-3 pt-3 border-t bg-red-50 -mx-4 -mb-4 px-4 py-3 rounded-b-lg">
+                      <p className="text-sm font-medium text-red-900">
+                        ❌ キャンセル済み
+                      </p>
+                      {order.cancellation_reason && (
+                        <p className="text-xs text-red-700 mt-1">
+                          理由: {order.cancellation_reason}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* キャンセルボタン */}
+                  {order.can_cancel && !order.cancelled && (
+                    <div className="mt-3 pt-3 border-t">
+                      <button
+                        onClick={() => handleCancelClick(order)}
+                        className="w-full px-4 py-2 bg-red-50 text-red-700 rounded-md hover:bg-red-100 transition-colors text-sm font-medium"
+                      >
+                        この注文をキャンセル
+                      </button>
+                      <p className="text-xs text-gray-500 mt-2 text-center">
+                        調理が開始される前であればキャンセルできます
+                      </p>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -215,6 +273,56 @@ export default function OrdersPage() {
           </ul>
         </div>
       </div>
+
+      {/* キャンセル確認モーダル */}
+      {cancelModalOpen && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              注文をキャンセルしますか？
+            </h3>
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm font-medium text-gray-900 mb-2">
+                注文番号: {selectedOrder.order_number}
+              </p>
+              <p className="text-sm text-gray-600">
+                合計: ¥{selectedOrder.total_amount.toLocaleString()}
+              </p>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                キャンセル理由（任意）
+              </label>
+              <textarea
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                placeholder="例：注文を間違えた、気が変わった など"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={3}
+              />
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setCancelModalOpen(false)}
+                disabled={isCancelling}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              >
+                戻る
+              </button>
+              <button
+                onClick={handleCancelConfirm}
+                disabled={isCancelling}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+              >
+                {isCancelling ? 'キャンセル中...' : 'キャンセルする'}
+              </button>
+            </div>
+            <p className="mt-3 text-xs text-gray-500 text-center">
+              キャンセル後は元に戻せません
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 下部タブバー */}
       <TabBar />
