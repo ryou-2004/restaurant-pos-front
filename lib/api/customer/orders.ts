@@ -34,6 +34,10 @@ export interface Order {
   table_id: number
   total_amount: number
   notes?: string
+  cancelled: boolean
+  cancelled_at?: string
+  cancellation_reason?: string
+  can_cancel: boolean
   order_items: OrderItem[]
   created_at: string
   updated_at: string
@@ -68,4 +72,15 @@ export async function fetchOrders(): Promise<Order[]> {
  */
 export async function createOrder(request: CreateOrderRequest): Promise<Order> {
   return apiPost<Order>(BASE_URL, { order: request })
+}
+
+/**
+ * 注文をキャンセル（調理前のみ）
+ *
+ * @param orderId - 注文ID
+ * @param cancellationReason - キャンセル理由
+ * @returns キャンセルされた注文
+ */
+export async function cancelOrder(orderId: number, cancellationReason?: string): Promise<Order> {
+  return apiPost<Order>(`${BASE_URL}/${orderId}/cancel`, { cancellation_reason: cancellationReason })
 }
